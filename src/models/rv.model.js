@@ -5,16 +5,41 @@ const rvSchema = new mongoose.Schema({
   manufacturer: { type: String, required: true },
   year: { type: Number, required: true },
   mileage: { type: Number, required: true },
-  nickname: { type: String },
-  datePurchased: { type: Date },
-  amountPaid: { type: Number },
-  purchasedFrom: { type: String },
-  city: { type: String },
-  state: { type: String },
-  phoneNumber: { type: String },
+  nickname: { type: String , required: true},
+  datePurchased: { type: Date , required: true},
+  amountPaid: { type: Number, required: true },
+  purchasedFrom: { type: String, required: true },
+  city: { type: String , required: true},
+  state: { type: String, required: true },
+  phoneNumber: { type: String, required: true },
   website: { type: String },
   documents: [{ type: String }], // URLs or file paths
-  notes: { type: String }
+  notes: { type: String },
+  model: { type: String },
+  name: { type: String },
+  floorplan: { type: String },
+  length: { type: Number },
+  width: { type: Number },
+  height: { type: Number },
+  weight: { type: Number },
+  interiorColorScheme: { type: String },
+  exteriorColorScheme: { type: String },
+  class: {
+    type: String,
+    enum: [
+      'Class A',
+      'Class B',
+      'Class C',
+      'Pop-up',
+      'Super C',
+      'Travel Trailer',
+      '5th wheel',
+      'Other'
+    ],
+    required: true
+  },
+  vin: { type: String },
+  serialId: { type: String },
 }, { timestamps: true });
 
 module.exports = mongoose.model('RV', rvSchema);
