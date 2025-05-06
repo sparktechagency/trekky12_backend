@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
     sms: { type: Boolean, default: false }
   },
   pushToken: { type: String },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
