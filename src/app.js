@@ -5,6 +5,8 @@ const {authRoutes, userRoutes } = require('./routes/auth.routes');
 const dotenv = require('dotenv');
 const insuranceRoutes = require('./routes/insurance.routes');
 const path = require('path');
+const membershipRoutes = require('./routes/membership.routes');
+
 // const userRoutes = require('./routes/user.routes');
 
 dotenv.config();
@@ -19,6 +21,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/insurance', insuranceRoutes);
+app.use('/api/memberships', membershipRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 
