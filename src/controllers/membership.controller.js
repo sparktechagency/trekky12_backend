@@ -44,4 +44,58 @@ const addMembership = async (req, res) => {
 }
 
 
-module.exports = { addMembership };
+const updateMembership = async (req, res) => {
+  try {
+
+    // console.log('Request user:', req.user); // Debug log
+    // console.log('Request body:', req.body); // Debug log
+    const { id } = req.params;
+    const documentPaths = req.files ? req.files.map(file => file.path) : [];
+    
+    const {
+      name,
+      datePurchased,
+      website,
+      phoneNumber,
+      accountNumber,
+      amountPaid,
+      expirationDate,
+      notes
+    } = req.body;
+
+    // Find membership and check if it belongs to the user
+    const existingMembership = await Membership.findOne({ 
+      _id: id,
+      user: req.user.id || req.user._id || req.user.userId 
+    });
+
+    if (!existingMembership) {
+      return res.status(404).json({ message: 'Membership not found or unauthorized' });
+    }
+
+    const updatedMembership = await Membership.findByIdAndUpdate(
+      id,
+      {
+        name,
+        datePurchased,
+        website,
+        phoneNumber,
+        accountNumber,
+        amountPaid,
+        expirationDate,
+        notes,
+        ...(documentPaths.length > 0 && { picture: documentPaths[0] })
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({ 
+      message: 'Membership updated successfully', 
+      membership: updatedMembership 
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating membership', error: error.message });
+  }
+};
+
+module.exports = { addMembership, updateMembership };

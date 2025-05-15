@@ -15,7 +15,7 @@ connectDB();
 
 // Middleware
 app.use(express.json());
-
+app.use(express.urlencoded({ extended: true }));
 
 // Mount routes
 app.use('/api/auth', authRoutes);
