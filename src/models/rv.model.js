@@ -5,11 +5,11 @@ const rvSchema = new mongoose.Schema({
   manufacturer: { type: String, required: true },
   year: { type: Number, required: true },
   mileage: { type: Number, required: true },
-  nickname: { type: String , required: true},
-  datePurchased: { type: Date , required: true},
+  nickname: { type: String, required: true },
+  datePurchased: { type: Date, required: true },
   amountPaid: { type: Number, required: true },
   purchasedFrom: { type: String, required: true },
-  city: { type: String , required: true},
+  city: { type: String, required: true },
   state: { type: String, required: true },
   phoneNumber: { type: String, required: true },
   website: { type: String },
@@ -40,6 +40,11 @@ const rvSchema = new mongoose.Schema({
   },
   vin: { type: String },
   serialId: { type: String },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('RV', rvSchema);
