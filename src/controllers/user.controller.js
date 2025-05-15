@@ -3,7 +3,8 @@ const User = require('../models/user.model');
 // Get current user's profile
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.email);
+    console.log(user);
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
