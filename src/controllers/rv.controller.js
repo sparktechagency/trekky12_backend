@@ -1,8 +1,11 @@
 const RV = require('../models/rv.model');
+const { deleteFile } = require('../utils/unlinkFile');
 
 const addRV = async (req, res) => {
   try {
     const documentPaths = req.files ? req.files.map(file => file.path) : [];
+    // console.log('Files received:', req.files);
+    // console.log('Document paths:', documentPaths);
     const {
       type,
       manufacturer,
@@ -105,6 +108,16 @@ const updateRV = async (req, res) => {
     if (existingRV.user.toString() !== req.user.userId) {
       return res.status(403).json({ message: 'Not authorized to update this RV' });
     }
+
+    // Delete old file if new one is being uploaded
+    // if (documentPaths.length > 0 && existingRV.documents) {
+    //   try {
+    //     await deleteFile(existingRV.documents);
+    //     console.log('Old file deleted successfully');
+    //   } catch (deleteError) {
+    //     console.error('Error deleting old file:', deleteError);
+    //   }
+    // }
 
     // Prepare update data
     const updateData = {
