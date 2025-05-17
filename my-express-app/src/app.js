@@ -4,10 +4,11 @@ const app = express();
 const authRoutes = require('./routes/auth.routes'); 
 const userRoutes = require('./routes/user.routes');
 const rvRoutes = require('./routes/rv.routes');
-const membershipRoutes = require('./routes/membership.routes')
+const membershipRoutes = require('./routes/membership.routes');
 const insuranceRoutes = require('./routes/insurance.routes');
 const maintenanceRoutes = require('./routes/maintenance.routes');
 const repairRoutes = require('./routes/repair.routes');
+
 const dotenv = require('dotenv');
 const path = require('path');
 
@@ -29,6 +30,5 @@ app.use('/api/insurance', insuranceRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/repair', repairRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
 
 module.exports = app;
