@@ -1,6 +1,15 @@
 const mongoose = require('mongoose');
 
 const membershipSchema = new mongoose.Schema({  
+    //under this membership how many RVs are there?
+    //which RV the membership is for????
+    //ambiguity about the RV
+
+    // rv: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'RV',
+    //     required: true
+    // },
     name: { type: String, required: true },
     datePurchased: { type: Date, required: true },
     website: { type: String },

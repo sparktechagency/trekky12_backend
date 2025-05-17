@@ -8,14 +8,15 @@ const {
     getInsurance,
     deleteInsurance
 } = require('../controllers/insurance.controller');
+const upload = require('../utils/uploadConfig');
 
-router.route('/')
-    .post(authenticate, addInsurance)
-    .get(authenticate, getInsurances);
 
-router.route('/:id')
-    .get(authenticate, getInsurance)
-    .put(authenticate, updateInsurance)
-    .delete(authenticate, deleteInsurance);
+
+router.post('/add-insurance', authenticate, upload.array('pictures', 5),  addInsurance);
+router.get('/get-all-insurances', authenticate, getInsurances);
+router.get('/get-insurance/:id', authenticate, getInsurance);
+router.put('/update-insurance/:id', authenticate, updateInsurance);
+router.delete('/delete-insurance/:id', authenticate, deleteInsurance);
+
 
 module.exports = router;

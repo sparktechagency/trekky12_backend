@@ -1,6 +1,16 @@
 const mongoose = require('mongoose');
 
 const insuranceSchema = new mongoose.Schema({
+    //ambiguity about the RV
+    //insurance is for????
+    //which RV the insurance is for???? 
+
+
+    // rv: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'RV',
+    //     required: true
+    // },
     companyName: {
         type: String,
         required: [true, 'Insurance company name is required'],
