@@ -2,18 +2,12 @@ const mongoose = require('mongoose');
 
 
 const repairSchema = new mongoose.Schema({
-    dadte: {
+    date: {
         type: Date,
         required: true
     },
     vendor: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Vendor',
-        required: true
-    },
-    rv: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'RV',
+        type: String,
         required: true
     },
     city: {
@@ -49,7 +43,12 @@ const repairSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
-    }
+    },
+     rv: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RV',
+        required: true
+    },
 }, { timestamps: true });
 const Repair = mongoose.model('Repair', repairSchema);
 module.exports = Repair;
