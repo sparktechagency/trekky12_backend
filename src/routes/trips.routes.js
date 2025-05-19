@@ -14,6 +14,6 @@ router.post('/add', authenticate, addTrip);
 router.get('/', authenticate, getTrips);
 router.get('/:id', authenticate, getTripById);
 router.patch('/update/:id', authenticate, updateTripStatus);
-router.patch('/delete/:id', authenticate, deleteTrip);
+router.delete('/delete/:id', authenticate, deleteTrip);
 
 module.exports = router;
