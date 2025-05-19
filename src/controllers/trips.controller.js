@@ -1,4 +1,4 @@
-const Trip = require('../models/trips.models');
+const Trip = require('../models/trips.model');
 
 // Add new trip
 const addTrip = async (req, res) => {
@@ -126,9 +126,42 @@ const updateTripStatus = async (req, res) => {
     }
 };
 
+
+const deleteTrip = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id || req.user._id || req.user.userId;
+
+        const trip = await Trip.findOneAndDelete({
+            _id: id,
+            userId
+        });
+
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: 'Trip not found or unauthorized'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Trip deleted successfully'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete trip',
+            error: error.message
+        });
+    }
+};
+
+
 module.exports = {
     addTrip,
     getTrips,
     getTripById,
-    updateTripStatus
+    updateTripStatus,
+    deleteTrip
 };
