@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const TokenBlacklist = require('../models/token-blacklist.model');
 const { OAuth2Client } = require('google-auth-library');
 const appleSignin = require('apple-signin-auth');
+const { sendVerificationCode } = require('../services/email.service');
 
 
 const register = async (req, res) => {
@@ -287,4 +288,122 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, login, googleAuth, appleAuth, googleCallback, appleCallback, logout };
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set verification code expiration (15 minutes)
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    // Save code to user document
+    user.resetPasswordCode = {
+      code: verificationCode,
+      expiresAt
+    };
+    await user.save();
+
+    const emailSent = await sendVerificationCode(email, verificationCode);
+    if (!emailSent) {
+      return res.status(500).json({ message: 'Failed to send verification code' });
+    }
+
+    // TODO: Send email with verification code
+    // You'll need to implement email sending functionality
+    // For now, we'll just return the code in response (only for development)
+    
+    res.json({ 
+      message: 'Verification code sent to your email',
+      code: verificationCode // Remove this in production
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to process request', error: err.message });
+  }
+};
+
+const verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.resetPasswordCode || !user.resetPasswordCode.code) {
+      return res.status(400).json({ message: 'No reset code requested' });
+    }
+
+    if (new Date() > user.resetPasswordCode.expiresAt) {
+      return res.status(400).json({ message: 'Verification code has expired' });
+    }
+
+    if (user.resetPasswordCode.code !== code) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    // Generate a temporary token for password reset
+    const resetToken = jwt.sign(
+      { userId: user._id, purpose: 'reset-password' },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    res.json({ 
+      message: 'Code verified successfully',
+      resetToken 
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Verification failed', error: err.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { newPassword, confirmPassword } = req.body;
+    const resetToken = req.headers.authorization?.split(' ')[1];
+
+    if (!resetToken) {
+      return res.status(400).json({ message: 'Reset token is required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    // Verify reset token
+    const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    if (decoded.purpose !== 'reset-password') {
+      return res.status(400).json({ message: 'Invalid reset token' });
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    
+    // Clear reset code
+    user.resetPasswordCode = undefined;
+    await user.save();
+
+    res.json({ message: 'Password reset successful' });
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+    res.status(500).json({ message: 'Password reset failed', error: err.message });
+  }
+};
+
+module.exports = { register, login, googleAuth, appleAuth, googleCallback, appleCallback, logout, forgotPassword, verifyResetCode, resetPassword };

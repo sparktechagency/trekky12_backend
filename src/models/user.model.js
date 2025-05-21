@@ -26,6 +26,10 @@ const userSchema = new mongoose.Schema({
     sms: { type: Boolean, default: false }
   },
   pushToken: { type: String },
+  resetPasswordCode: {
+    code: String,
+    expiresAt: Date
+  },
   // user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
