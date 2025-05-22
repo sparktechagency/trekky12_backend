@@ -160,6 +160,17 @@ const deleteRV = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this RV' });
     }
 
+    // Delete associated document files
+    if (existingRV.documents && existingRV.documents.length > 0) {
+      for (const documentPath of existingRV.documents) {
+        try {
+          await deleteFile(documentPath);
+        } catch (deleteError) {
+          console.error(`Error deleting file ${documentPath}:`, deleteError);
+        }
+      }
+    }
+
     // Delete the RV
     await RV.findByIdAndDelete(rvId);
 
