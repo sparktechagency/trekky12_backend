@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const TokenBlacklist = require('../models/token-blacklist.model');
 const { OAuth2Client } = require('google-auth-library');
 const appleSignin = require('apple-signin-auth');
-const { sendVerificationCode } = require('../services/email.service');
+const { sendResetCode } = require('../services/email.service');
 
 
 const register = async (req, res) => {
@@ -310,14 +310,10 @@ const forgotPassword = async (req, res) => {
     };
     await user.save();
 
-    const emailSent = await sendVerificationCode(email, verificationCode);
+    const emailSent = await sendResetCode(email, verificationCode);
     if (!emailSent) {
       return res.status(500).json({ message: 'Failed to send verification code' });
     }
-
-    // TODO: Send email with verification code
-    // You'll need to implement email sending functionality
-    // For now, we'll just return the code in response (only for development)
     
     res.json({ 
       message: 'Verification code sent to your email',

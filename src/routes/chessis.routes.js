@@ -7,7 +7,7 @@ const {
     getChassisById,
     updateChassis,
     deleteChassis
-} = require('../controllers/chassis.controller');
+} = require('../controllers/chessis.controller');
 
 // Routes
 router.post('/add', authenticate, addChassis);

@@ -12,7 +12,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const newExpenseRoutes = require('./routes/newExpense.routes');
 const tripsRoutes = require('./routes/trips.routes');
-const chassisRoutes = require('./routes/chassis.routes');
+const chassisRoutes = require('./routes/chessis.routes');
 
 
 dotenv.config();
