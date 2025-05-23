@@ -3,20 +3,41 @@ const { deleteFile } = require('../utils/unlinkFile');
 const NotificationService = require('../services/notification.service');
 
 const addMaintenance = async (req, res) => {
+
+    const documentPaths = req.files ? req.files.map(file => file.path) : 
+                         req.file ? [req.file.path] : [];
     try {
         const {
             component,
+            dateCreated,
+            issue,
+            underWarranty,
+            vendor,
             maintenanceToBePerformed,
+            dropOffDate,
             initialMileage,
             notes,
+            invoiceNumber,
+            currentMileage,
+            pictures,
+            status,
             rvId
         } = req.body;
 
         const maintenance = await Maintenance.create({
             component,
+            dateCreated,
+            issue,
+            underWarranty,
+            vendor,
             maintenanceToBePerformed,
+            dropOffDate,
             initialMileage,
             notes,
+            invoiceNumber,
+            currentMileage,
+            pictures: documentPaths[0] || null,
+            status,
             rv: rvId,
             user: req.user.id || req.user._id || req.user.userId
         });

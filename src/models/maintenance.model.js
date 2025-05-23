@@ -11,12 +11,17 @@ const maintenanceSchema = new mongoose.Schema({
     //     required: true
     // },
     component: { type: String, required: true },
+    dateCreated: { type: Date, default: Date.now },
+    issue: { type: String },
+    underWarranty: { type: Boolean, default: false },
+    vendor: { type: String },
     maintenanceToBePerformed: { type: Date, required: true },
+    dropOffDate: { type: Date },
     initialMileage: { type: Number, required: true },
     notes: { type: String },
     // Additional fields for updates
-    vendor: { type: String },
-    dropOffDate: { type: Date },
+    
+    
     invoiceNumber: { type: String },
     currentMileage: { type: Number },
     pictures: [{ type: String }], // Array of file paths

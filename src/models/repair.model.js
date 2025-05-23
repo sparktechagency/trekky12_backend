@@ -2,10 +2,6 @@ const mongoose = require('mongoose');
 
 
 const repairSchema = new mongoose.Schema({
-    date: {
-        type: Date,
-        required: true
-    },
     vendor: {
         type: String,
         required: true

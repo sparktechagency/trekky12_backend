@@ -3,7 +3,6 @@ const Repair = require('../models/repair.model');
 const addRepair = async (req, res) => {
     try {
         const {
-            date,
             vendor,
             rv,
             city,
@@ -15,7 +14,6 @@ const addRepair = async (req, res) => {
         } = req.body;
 
         const newRepair = await Repair.create({
-            date,
             vendor,
             rv,
             city,
@@ -43,7 +41,6 @@ const updateRepair = async (req, res) => {
     try {
         const { id } = req.params;
         const {
-            date,
             vendor,
             rv,
             city,
