@@ -32,7 +32,7 @@ const addRV = async (req, res) => {
       exteriorColorScheme,
       class: rvClass,
       vin,
-      serialId
+      serialId,
     } = req.body;
 
     const rv = await RV.create({

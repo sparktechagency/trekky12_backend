@@ -25,6 +25,7 @@ const addTrip = async (req, res) => {
             visitStatus,
             tripType
         });
+        console.log(req.user.id || req.user._id || req.user.userId,)
 
         res.status(201).json({
             success: true,

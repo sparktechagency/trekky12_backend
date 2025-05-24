@@ -13,7 +13,7 @@ const path = require('path');
 const newExpenseRoutes = require('./routes/newExpense.routes');
 const tripsRoutes = require('./routes/trips.routes');
 const chassisRoutes = require('./routes/chessis.routes');
-
+const tireRoutes = require('./routes/appliance.routes/tire.routes');
 
 dotenv.config();
 
@@ -35,6 +35,7 @@ app.use('/api/repair', repairRoutes);
 app.use('/api/expenses', newExpenseRoutes);
 app.use('/api/trips', tripsRoutes);
 app.use('/api/chassis', chassisRoutes);
+app.use('/api/appliance/tire', tireRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 
