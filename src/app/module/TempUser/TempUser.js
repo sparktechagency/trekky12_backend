@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
+const tempUserSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
@@ -19,10 +19,10 @@ const userSchema = new mongoose.Schema({
         enum: ['ADMIN', 'USER'],
         default: 'USER'
     },
-    rvIds: [{
+    rvId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'RV'
-    }],
+    },
     isVerified: {
         type: Boolean,
         default: false
@@ -35,10 +35,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         expiresAt: Date
     },
-    profilePicture: {
-        type: String,
-        default: null
-    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -50,6 +46,6 @@ const userSchema = new mongoose.Schema({
 
 });
 
-const User = mongoose.model('User', userSchema);
+const TempUser = mongoose.model('TempUser', tempUserSchema);
 
-module.exports = User;
+module.exports = TempUser;
