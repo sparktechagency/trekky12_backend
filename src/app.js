@@ -26,6 +26,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Mount routes
 app.use('/api/auth', require('./app/module/Auth/auth.router'));
+app.use('/api/user', require('./app/module/User/user.router'));
+
 
 // app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes);

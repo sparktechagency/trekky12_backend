@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         expiresAt: Date
     },
-    profilePicture: {
+    profilePic: {
         type: String,
         default: null
     },
