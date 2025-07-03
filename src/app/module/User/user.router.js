@@ -7,7 +7,7 @@ const upload = require('../../../utils/uploadConfig');
 const { authenticateUser } = require('../../middleware/auth.middleware');
 
 
-
+ 
 
 
 router.get('/profile', authenticateUser, getUserProfile);

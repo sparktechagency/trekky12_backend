@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'RV'
     }],
+    phoneNumber: {
+        type: String
+    },
     isVerified: {
         type: Boolean,
         default: false

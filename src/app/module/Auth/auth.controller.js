@@ -43,10 +43,8 @@ exports.signup = async (req, res, next) => {
             email,
             phone,
             password: hashedPassword,
-            verificationCode: {
-                verificationCode,
-                expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-            },
+            verificationCode: verificationCode,
+            verificationCodeExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
             role: 'USER'
         });
 

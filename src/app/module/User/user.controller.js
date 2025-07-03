@@ -7,27 +7,28 @@ const bcrypt = require('bcrypt');
 
 
 exports.getUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
     if (!user) throw new ApiError('User not found', 404);
     return res.status(200).json({
         success: true,
+        message: 'User profile retrieved successfully',
         user,
     });
 });
 
 
 exports.updateUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password');
     if (!user) throw new ApiError('User not found', 404);
     user.name = req.body.name || user.name;
-    user.address = req.body.address || user.address;
-    user.phone = req.body.phone || user.phone;
+    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
     if (req.file) {
         user.profilePic = req.file.path;
     }
     await user.save();
     return res.status(200).json({
         success: true,
+        message: 'Profile updated successfully',
         user
     });
 });

@@ -28,12 +28,13 @@ const tempUserSchema = new mongoose.Schema({
         default: false
     },
     verificationCode: {
-        type: String,
-        expiresAt: Date 
+        type: String
+    },
+    verificationCodeExpiresAt: {
+        type: Date
     },
     passwordResetCode: {
-        type: String,
-        expiresAt: Date
+        type: String
     },
     createdAt: {
         type: Date,
