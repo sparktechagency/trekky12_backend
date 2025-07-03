@@ -16,7 +16,7 @@ class TokenService {
       throw new ApiError('JWT_SECRET is not defined in environment variables', 500);
     }
     
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
   }
 
   /**

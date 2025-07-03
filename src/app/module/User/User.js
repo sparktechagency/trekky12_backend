@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    passwordResetCodeExpiresAt: {
+        type: Date,
+        default: Date.now() + 10 * 60 * 1000
+    },
     createdAt: {
         type: Date,
         default: Date.now
