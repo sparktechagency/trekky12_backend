@@ -62,6 +62,7 @@ const rvSchema = new mongoose.Schema({
     weight: {
         type: Number,
     }
+    
 });
 
 const RV = mongoose.model('RV', rvSchema);
