@@ -2,6 +2,7 @@ const RV = require('./RV');
 const asyncHandler = require('../../../utils/asyncHandler');
 
 exports.addRv = asyncHandler(async (req, res) => {
+    console.log(req.body);
     const rv = await RV.create(req.body);
     res.status(201).json({
         success: true,
