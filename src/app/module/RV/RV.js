@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const rvSchema = new mongoose.Schema({
+<<<<<<< HEAD
   // Identification
   nickname: {
     type: String,
@@ -55,6 +56,69 @@ const rvSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+=======
+    nickname: {
+        type: String,
+    },
+    class: {
+        type: String,
+    },
+    manufacturer: {
+        type: String,
+    },
+    modelName: {
+        type: String,
+    },
+    modelNumber: {
+        type: String,
+    },
+    dateOfPurchase: {
+        type: Date,
+    },
+    amountPaid: {
+        type: Number,
+    },
+    newOrUsed: {
+        type: String,
+    },
+    currentMileage: {
+        type: Number,
+    },
+    purchasedFrom: {
+        type: String,
+    },
+    city: {
+        type: String,
+    },
+    state: {
+        type: String,
+    },  
+    phoneNumber: {
+        type: String,
+    },
+    floorplan: {
+        type: String,
+    },
+    interiorColorScheme: {
+        type: String,
+    },
+    exteriorColorScheme: {
+        type: String,
+    },
+    length: {
+        type: Number,
+    },
+    width: {
+        type: Number,
+    },
+    height: {
+        type: Number,
+    },
+    weight: {
+        type: Number,
+    }
+    
+>>>>>>> b82b60b998e7079b0d55887fabd439b5268ae74b
 });
 
 const RV = mongoose.model('RV', rvSchema);
