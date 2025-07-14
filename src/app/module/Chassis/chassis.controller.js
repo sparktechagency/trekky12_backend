@@ -13,6 +13,7 @@ exports.createChassis = asyncHandler(async (req, res) => {
 
 exports.getChassis = asyncHandler(async (req, res) => {
     const chassis = await Chassis.find();
+    if (!chassis) throw new ApiError('Chassis not found', 404);
     return res.status(200).json({
         success: true,
         message: 'Chassis retrieved successfully',

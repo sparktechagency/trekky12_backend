@@ -29,6 +29,7 @@ app.use('/api/auth', require('./app/module/Auth/auth.router'));
 app.use('/api/user', require('./app/module/User/user.router'));
 app.use('/api/rv', require('./app/module/RV/rv.router'));
 app.use('/api/chassis', require('./app/module/Chassis/chassis.router'));
+app.use('/api/tire', require('./app/module/Tire/tire.router'));
 
 
 // app.use('/api/auth', authRoutes);
