@@ -8,7 +8,7 @@ exports.addRv = asyncHandler(async (req, res) => {
         success: true,
         data: rv
     })
-})
+}) 
 
 exports.getRvs = asyncHandler(async (req, res) => {
     const rvs = await RV.find();
