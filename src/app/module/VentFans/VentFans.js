@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const washerSchema = new mongoose.Schema({
+const ventFansSchema = new mongoose.Schema({
     name: {
         type: String,
 
@@ -30,6 +30,6 @@ const washerSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-const Washer = mongoose.model('Washer', washerSchema);
+const VentFans = mongoose.model('VentFans', ventFansSchema);
 
-module.exports = Washer;
+module.exports = VentFans;
