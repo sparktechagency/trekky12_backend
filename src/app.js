@@ -37,6 +37,8 @@ app.use('/api/washer', require('./app/module/Washer/washer.router'));
 app.use('/api/toilet', require('./app/module/Toilet/toilet.router'));
 app.use('/api/dryer', require('./app/module/Dryer/dryer.router'));
 app.use('/api/tv', require('./app/module/TV/tv.router'));
+app.use('/api/exhaust-fans', require('./app/module/ExhaustFans/exhaustFans.router'));
+
 
 
 // app.use('/api/auth', authRoutes);
