@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const waterPumpSchema = new mongoose.Schema({
+const washerSchema = new mongoose.Schema({
     name: {
         type: String,
 
@@ -13,7 +13,7 @@ const waterPumpSchema = new mongoose.Schema({
         type: Date,
 
     },
-    price: {
+    cost: {
         type: Number,
 
     },
@@ -27,6 +27,6 @@ const waterPumpSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-const WaterPump = mongoose.model('WaterPump', waterPumpSchema);
+const Washer = mongoose.model('Washer', washerSchema);
 
-module.exports = WaterPump;
+module.exports = Washer;
