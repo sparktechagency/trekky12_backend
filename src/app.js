@@ -35,6 +35,7 @@ app.use('/api/air-condition', require('./app/module/Air-condition/air-condition.
 app.use('/api/water-pump', require('./app/module/WaterPump/waterPump.router'));
 app.use('/api/washer', require('./app/module/Washer/washer.router'));
 app.use('/api/toilet', require('./app/module/Toilet/toilet.router'));
+app.use('/api/dryer', require('./app/module/Dryer/dryer.router'));
 
 
 // app.use('/api/auth', authRoutes);
