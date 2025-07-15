@@ -17,6 +17,9 @@ const toiletSchema = new mongoose.Schema({
         type: Number,
 
     },
+    location: {
+        type: String,
+    },
     notes: {
         type: String,
         default: '',

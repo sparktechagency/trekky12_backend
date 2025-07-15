@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const dryerSchema = new mongoose.Schema({
+const tvSchema = new mongoose.Schema({
     name: {
         type: String,
 
@@ -28,8 +28,8 @@ const dryerSchema = new mongoose.Schema({
         type: [String], // image URLs or file paths
         default: [],
     }
-}, { timestamps: true });
+}, { timestamps: true });   
 
-const Dryer = mongoose.model('Dryer', dryerSchema);
+const Tv = mongoose.model('Tv', tvSchema);
 
-module.exports = Dryer;
+module.exports = Tv;
