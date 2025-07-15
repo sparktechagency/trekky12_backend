@@ -39,6 +39,7 @@ app.use('/api/dryer', require('./app/module/Dryer/dryer.router'));
 app.use('/api/tv', require('./app/module/TV/tv.router'));
 app.use('/api/exhaust-fans', require('./app/module/ExhaustFans/exhaustFans.router'));
 app.use('/api/vent-fans', require('./app/module/VentFans/ventFans.router'));
+app.use('/api/dishwasher', require('./app/module/Dishwasher/dishwasher.router'));
 
 
 
