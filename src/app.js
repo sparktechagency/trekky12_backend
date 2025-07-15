@@ -31,7 +31,8 @@ app.use('/api/rv', require('./app/module/RV/rv.router'));
 app.use('/api/chassis', require('./app/module/Chassis/chassis.router'));
 app.use('/api/tire', require('./app/module/Tire/tire.router'));
 app.use('/api/heater', require('./app/module/Heater/heater.router'));
-
+app.use('/api/air-condition', require('./app/module/Air-condition/air-condition.router'));
+app.use('/api/water-pump', require('./app/module/WaterPump/waterPump.router'));
 
 // app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes);
