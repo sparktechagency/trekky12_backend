@@ -50,7 +50,7 @@ app.use('/api/surround-sound', require('./app/module/SurroundSound/surroundSound
 app.use('/api/membership', require('./app/module/Membership/membership.router'));
 app.use('/api/insurance-company', require('./app/module/InsuranceCompany/insuranceCompany.router'));
 app.use('/api/new-repair', require('./app/module/NewRepair/newRepair.router'));
-
+app.use('/api/reports', require('./app/module/Reports/reports.router'));
 
 
 // app.use('/api/auth', authRoutes);
