@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const exhaustFansSchema = new mongoose.Schema({
+const dvdSchema = new mongoose.Schema({
     name: {
         type: String,
 
@@ -28,8 +28,8 @@ const exhaustFansSchema = new mongoose.Schema({
         type: [String], // image URLs or file paths
         default: [],
     }
-}, { timestamps: true });   
+}, { timestamps: true });
+    
+const Dvd = mongoose.model('Dvd', dvdSchema);
 
-const ExhaustFans = mongoose.model('ExhaustFans', exhaustFansSchema);
-
-module.exports = ExhaustFans;
+module.exports = Dvd;

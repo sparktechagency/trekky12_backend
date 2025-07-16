@@ -41,6 +41,7 @@ app.use('/api/exhaust-fans', require('./app/module/ExhaustFans/exhaustFans.route
 app.use('/api/vent-fans', require('./app/module/VentFans/ventFans.router'));
 app.use('/api/dishwasher', require('./app/module/Dishwasher/dishwasher.router'));
 app.use('/api/celling-fans', require('./app/module/CellingFans/cellingFans.router'));
+app.use('/api/dvd', require('./app/module/DVD/dvd.router'));
 
 
 // app.use('/api/auth', authRoutes);

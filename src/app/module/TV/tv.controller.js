@@ -1,5 +1,4 @@
 const Tv = require('./Tv');
-
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 
@@ -22,7 +21,18 @@ exports.createTv = asyncHandler(async (req, res) => {
     });
 });
 
-exports.getTv = asyncHandler(async (req, res) => {
+exports.getTvs = asyncHandler(async (req, res) => {
+    const tvs = await Tv.find();
+    if (!tvs) throw new ApiError('Tvs not found', 404);
+    return res.status(200).json({
+        success: true,
+        message: 'Tvs retrieved successfully',
+        tvs
+    });
+});
+
+
+exports.getTvById = asyncHandler(async (req, res) => {
     const tv = await Tv.findById(req.params.id);
     if (!tv) throw new ApiError('Tv not found', 404);
     return res.status(200).json({
@@ -60,26 +70,6 @@ exports.updateTv = asyncHandler(async (req, res) => {
         success: true,
         message: 'Tv updated successfully',
         tv
-    });
-});
-
-exports.deleteTv = asyncHandler(async (req, res) => {
-    const tv = await Tv.findByIdAndDelete(req.params.id);
-    if (!tv) throw new ApiError('Tv not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'Tv deleted successfully',
-        tv
-    });
-});
-
-exports.getTvs = asyncHandler(async (req, res) => {
-    const tvs = await Tv.find();
-    if (!tvs) throw new ApiError('Tvs not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'Tvs retrieved successfully',
-        tvs
     });
 });
 
