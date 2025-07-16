@@ -43,7 +43,7 @@ app.use('/api/dishwasher', require('./app/module/Dishwasher/dishwasher.router'))
 app.use('/api/celling-fans', require('./app/module/CellingFans/cellingFans.router'));
 app.use('/api/dvd', require('./app/module/DVD/dvd.router'));
 app.use('/api/gps', require('./app/module/GPS/gps.router'));
-
+app.use('/api/internet-satellite', require('./app/module/InternetSatellite/internetSatellite.router'));
  
 // app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes);
