@@ -5,6 +5,10 @@ const { ApiError } = require('../../../errors/errorHandler');
 exports.createInternetSatellite = asyncHandler(async (req, res) => {
     const internetSatellite = await InternetSatellite.create(req.body);
     if (!internetSatellite) throw new ApiError('InternetSatellite not created', 500);
+    const images = req.files.map(file => file.path);
+    internetSatellite.images = images;
+    await internetSatellite.save();
+    
     res.status(201).json({
         success: true,
         message: 'InternetSatellite created successfully',

@@ -48,6 +48,7 @@ app.use('/api/wifi-router', require('./app/module/WifiRouter/wifiRouter.router')
 app.use('/api/outdoor-radio', require('./app/module/OutdoorRadio/outdoorRadio.router'));
 app.use('/api/surround-sound', require('./app/module/SurroundSound/surroundSound.router'));
 app.use('/api/membership', require('./app/module/Membership/membership.router'));
+app.use('/api/insurance-company', require('./app/module/InsuranceCompany/insuranceCompany.router'));
  
 
 
