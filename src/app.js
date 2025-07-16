@@ -45,7 +45,11 @@ app.use('/api/dvd', require('./app/module/DVD/dvd.router'));
 app.use('/api/gps', require('./app/module/GPS/gps.router'));
 app.use('/api/internet-satellite', require('./app/module/InternetSatellite/internetSatellite.router'));
 app.use('/api/wifi-router', require('./app/module/WifiRouter/wifiRouter.router'));
+app.use('/api/outdoor-radio', require('./app/module/OutdoorRadio/outdoorRadio.router'));
  
+
+
+
 // app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes);
 // app.use('/api/rv', rvRoutes);
