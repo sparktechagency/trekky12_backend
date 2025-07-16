@@ -3,7 +3,8 @@ const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 
 exports.createAirCondition = asyncHandler(async (req, res) => {
-    const airCondition = await AirCondition.create(req.body);
+    const userId = req.user.id || req.user._id;
+    const airCondition = await AirCondition.create({ ...req.body, user: userId });
     const images = req.files;
     if (!airCondition) throw new ApiError('AirCondition not created', 500);
     
@@ -21,7 +22,7 @@ exports.createAirCondition = asyncHandler(async (req, res) => {
 
 
 exports.getAirConditions = asyncHandler(async (req, res) => {
-    const airConditions = await AirCondition.find();
+    const airConditions = await AirCondition.find({ user: req.user._id });
     if (!airConditions) throw new ApiError('AirConditions not found', 404);
     return res.status(200).json({
         success: true,
@@ -43,7 +44,8 @@ exports.getAirConditionById = asyncHandler(async (req, res) => {
 
 
 exports.updateAirCondition = asyncHandler(async (req, res) => {
-    const airCondition = await AirCondition.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const userId = req.user.id || req.user._id;
+    const airCondition = await AirCondition.findByIdAndUpdate(req.params.id, { ...req.body, user: userId }, { new: true });
     if (!airCondition) throw new ApiError('AirCondition not found', 404);
     return res.status(200).json({
         success: true,
@@ -54,7 +56,8 @@ exports.updateAirCondition = asyncHandler(async (req, res) => {
 
 
 exports.deleteAirCondition = asyncHandler(async (req, res) => {
-    const airCondition = await AirCondition.findByIdAndDelete(req.params.id);
+    const userId = req.user.id || req.user._id;
+    const airCondition = await AirCondition.findByIdAndDelete(req.params.id, { user: userId });
     if (!airCondition) throw new ApiError('AirCondition not found', 404);
     return res.status(200).json({
         success: true,

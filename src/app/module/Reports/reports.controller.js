@@ -57,4 +57,31 @@ exports.deleteReport = asyncHandler(async (req, res) => {
     });
 });
 
+exports.addFavoriteReport = asyncHandler(async (req, res) => {
+    const user = req.user;
+    if (!user.favorites) user.favorites = [];
+    if (!user.favorites.includes(req.params.id)) {
+        user.favorites.push(req.params.id);
+        await user.save();
+    }
 
+    return res.status(200).json({
+        success: true,
+        message: 'Report added to favorites',
+    });
+});
+
+exports.removeFavoriteReport = asyncHandler(async (req, res) => {
+    const user = req.user;
+    if (!user.favorites) user.favorites = [];
+    const index = user.favorites.indexOf(req.params.id);
+    if (index > -1) {
+        user.favorites.splice(index, 1);
+        await user.save();
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: 'Report removed from favorites',
+    });
+});
