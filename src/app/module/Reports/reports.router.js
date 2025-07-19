@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 
-const { createReport, getReport, getReportById, updateReport, deleteReport, addFavoriteReport, removeFavoriteReport } = require('./reports.controller');
+const { createReport, getReport, getReportById, updateReport, deleteReport, addFavoriteReport, removeFavoriteReport, getFavoriteReport } = require('./reports.controller');
 const upload = require('../../../utils/uploadConfig');
 const { authenticateUser } = require('../../middleware/auth.middleware');
 
@@ -14,5 +14,5 @@ router.delete('/delete/:id', authenticateUser, deleteReport);
 //favorite the report
 router.post('/addFavorite/:id', authenticateUser, addFavoriteReport);
 router.delete('/removeFavorite/:id', authenticateUser, removeFavoriteReport);  
-
+router.get('/getFavorite', authenticateUser, getFavoriteReport);
 module.exports = router;

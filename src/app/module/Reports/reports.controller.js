@@ -4,7 +4,8 @@ const { ApiError } = require('../../../errors/errorHandler');
 const deleteFile = require('../../../utils/unlinkFile');
 
 exports.createReport = asyncHandler(async (req, res) => {
-    const report = await Report.create(req.body);
+    const userId = req.user.id || req.user._id;
+    const report = await Report.create({ ...req.body, user: userId });
     if (!report) throw new ApiError('Report not created', 500);
     await report.save();
     res.status(201).json({
@@ -37,7 +38,7 @@ exports.getReportById = asyncHandler(async (req, res) => {
 
 
 exports.updateReport = asyncHandler(async (req, res) => {
-    const report = await Report.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const report = await Report.findByIdAndUpdate(req.params.id, { ...req.body, user: req.user._id }, { new: true });
     if (!report) throw new ApiError('Report not found', 404);
     return res.status(200).json({
         success: true,
@@ -83,5 +84,16 @@ exports.removeFavoriteReport = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Report removed from favorites',
+    });
+});
+
+
+exports.getFavoriteReport = asyncHandler(async (req, res) => {
+    const user = req.user;
+    const reports = await Report.find({ _id: { $in: user.favorites } });
+    return res.status(200).json({
+        success: true,
+        message: 'Favorite reports retrieved successfully',
+        reports
     });
 });
