@@ -52,6 +52,7 @@ app.use('/api/insurance-company', require('./app/module/InsuranceCompany/insuran
 app.use('/api/new-repair', require('./app/module/NewRepair/newRepair.router'));
 app.use('/api/reports', require('./app/module/Reports/reports.router'));
 app.use('/api/expense', require('./app/module/Expense/expense.router'));
+app.use('/api/maintenance-schedule', require('./app/module/MaintenanceSchedule/maintenanceSchedule.router'));
 
 
 // app.use('/api/auth', authRoutes);
