@@ -1,6 +1,7 @@
 const express = require('express');
 const connectDB = require('./config/db');
 const app = express();
+const cors = require('cors');
 // const authRoutes = require('./routes/auth.routes'); 
 // const userRoutes = require('./routes/user.routes');
 // const rvRoutes = require('./routes/rv.routes');
@@ -23,6 +24,26 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const allowedOrigins = [         // your main frontend from .env
+  "http://10.10.20.60:3002"     // fallback localhost
+];
+
+
+// Security Middlewares
+// app.use(helmet());  
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log("Incoming origin:", origin);
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      console.log("Allowed:", origin);
+      return callback(null, true);
+    }
+    console.log("Blocked:", origin);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+}));
 
 // Mount routes
 app.use('/api/auth', require('./app/module/Auth/auth.router'));
