@@ -1,6 +1,7 @@
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 const ExhaustFans = require('./ExhaustFans');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 
 exports.createExhaustFans = asyncHandler(async (req, res) => {
     const exhaustFans = await ExhaustFans.create(req.body);
@@ -45,25 +46,51 @@ exports.updateExhaustFans = asyncHandler(async (req, res) => {
     const exhaustFans = await ExhaustFans.findById(req.params.id);
     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
 
+    Object.keys(req.body).forEach(key => {
+        exhaustFans[key] = req.body[key];
+    });
+
+    await exhaustFans.save();
+
+
     if (req.files && req.files.length > 0) {
         const oldImages = exhaustFans.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        exhaustFans.images = [...oldImages, ...newImages];
-        await exhaustFans.save();
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
-                deleteFile(`${uploadPath}/${path}`);
+                fs.unlinkSync(`${uploadPath}/${path}`);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(err);
                 }
             }
         });
-    } else {
-        await exhaustFans.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        exhaustFans.images = newImages;
     }
+    // if (req.files && req.files.length > 0) {
+    //     const oldImages = exhaustFans.images;
+    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
+    //     exhaustFans.images = [...oldImages, ...newImages];
+    //     await exhaustFans.save();
+
+    //     oldImages.forEach(image => {
+    //         const path = image.split('/').pop();
+    //         try {
+    //             deleteFile(`${uploadPath}/${path}`);
+    //         } catch (err) {
+    //             if (err.code !== 'ENOENT') {
+    //                 console.error(err);
+    //             }
+    //         }
+    //     });
+    // } else {
+    //     await exhaustFans.updateOne(req.body);
+    // }
 
     return res.status(200).json({
         success: true,
@@ -73,23 +100,34 @@ exports.updateExhaustFans = asyncHandler(async (req, res) => {
 });
 
 
-exports.deleteExhaustFans = asyncHandler(async (req, res) => {
-    const exhaustFans = await ExhaustFans.findByIdAndDelete(req.params.id);
-    if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
+// exports.deleteExhaustFans = asyncHandler(async (req, res) => {
+//     const exhaustFans = await ExhaustFans.findByIdAndDelete(req.params.id);
+//     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
+//     return res.status(200).json({
+//         success: true,
+//         message: 'ExhaustFans deleted successfully',
+//         exhaustFans
+//     });
+// });
+
+// exports.deleteAllExhaustFans = asyncHandler(async (req, res) => {
+//     const exhaustFans = await ExhaustFans.deleteMany();
+//     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
+//     return res.status(200).json({
+//         success: true,
+//         message: 'ExhaustFans deleted successfully',
+//         exhaustFans
+//     });
+// });
+
+
+exports.deleteAllExhaustFan = asyncHandler(async (req, res) => {
+    const exhaustFans = await deleteDocumentWithFiles(ExhaustFans, req.params.id, "uploads");
+    if (!exhaustFans) throw new ApiError("exhaustFans not found", 404);
+
     return res.status(200).json({
         success: true,
-        message: 'ExhaustFans deleted successfully',
-        exhaustFans
+        message: "exhaustFans deleted successfully (with images)",
+        exhaustFans,
     });
 });
-
-exports.deleteAllExhaustFans = asyncHandler(async (req, res) => {
-    const exhaustFans = await ExhaustFans.deleteMany();
-    if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'ExhaustFans deleted successfully',
-        exhaustFans
-    });
-});
-

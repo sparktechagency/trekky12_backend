@@ -1,6 +1,7 @@
 const Tv = require('./Tv');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 
 exports.createTv = asyncHandler(async (req, res) => {
     const tv = await Tv.create(req.body);
@@ -46,25 +47,52 @@ exports.updateTv = asyncHandler(async (req, res) => {
     const tv = await Tv.findById(req.params.id);
     if (!tv) throw new ApiError('Tv not found', 404);
 
+
+    Object.keys(req.body).forEach(key => {
+        tv[key] = req.body[key];
+    });
+
+    await tv.save();
+
+
     if (req.files && req.files.length > 0) {
         const oldImages = tv.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        tv.images = [...oldImages, ...newImages];
-        await tv.save();
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
-                deleteFile(`${uploadPath}/${path}`);
+                fs.unlinkSync(`${uploadPath}/${path}`);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(err);
                 }
             }
         });
-    } else {
-        await tv.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        tv.images = newImages;
     }
+    // if (req.files && req.files.length > 0) {
+    //     const oldImages = tv.images;
+    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
+    //     tv.images = [...oldImages, ...newImages];
+    //     await tv.save();
+
+    //     oldImages.forEach(image => {
+    //         const path = image.split('/').pop();
+    //         try {
+    //             deleteFile(`${uploadPath}/${path}`);
+    //         } catch (err) {
+    //             if (err.code !== 'ENOENT') {
+    //                 console.error(err);
+    //             }
+    //         }
+    //     });
+    // } else {
+    //     await tv.updateOne(req.body);
+    // }
 
     return res.status(200).json({
         success: true,
@@ -73,13 +101,24 @@ exports.updateTv = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.deleteTv = asyncHandler(async (req, res) => {
+//     const tv = await Tv.findByIdAndDelete(req.params.id);
+//     if (!tv) throw new ApiError('Tv not found', 404);
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Tv deleted successfully',
+//         tv
+//     });
+// });
+
+
 exports.deleteTv = asyncHandler(async (req, res) => {
-    const tv = await Tv.findByIdAndDelete(req.params.id);
-    if (!tv) throw new ApiError('Tv not found', 404);
+    const tv = await deleteDocumentWithFiles(Tv, req.params.id, "uploads");
+    if (!tv) throw new ApiError("tv not found", 404);
+
     return res.status(200).json({
         success: true,
-        message: 'Tv deleted successfully',
-        tv
+        message: "tv deleted successfully (with images)",
+        tv,
     });
 });
-

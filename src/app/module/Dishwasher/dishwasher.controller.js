@@ -2,6 +2,7 @@ const Dishwasher = require('./Dishwasher');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 const upload = require('../../../utils/uploadConfig');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 
 exports.createDishwasher = asyncHandler(async (req, res) => {
     const dishwasher = await Dishwasher.create(req.body);
@@ -45,40 +46,77 @@ exports.getDishwasherById = asyncHandler(async (req, res) => {
 
 
 
+// exports.deleteDishwasher = asyncHandler(async (req, res) => {
+//     const dishwasher = await Dishwasher.findByIdAndDelete(req.params.id);
+//     if (!dishwasher) throw new ApiError('Dishwasher not found', 404);
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Dishwasher deleted successfully',
+//         dishwasher
+//     });
+// });
+
 exports.deleteDishwasher = asyncHandler(async (req, res) => {
-    const dishwasher = await Dishwasher.findByIdAndDelete(req.params.id);
-    if (!dishwasher) throw new ApiError('Dishwasher not found', 404);
+    const dishwasher = await deleteDocumentWithFiles(Dishwasher, req.params.id, "uploads");
+    if (!dishwasher) throw new ApiError("dishwasher not found", 404);
+
     return res.status(200).json({
         success: true,
-        message: 'Dishwasher deleted successfully',
-        dishwasher
+        message: "dishwasher deleted successfully (with images)",
+        dishwasher,
     });
 });
-
 
 exports.updateDishwasher = asyncHandler(async (req, res) => {
     const dishwasher = await Dishwasher.findById(req.params.id);
     if (!dishwasher) throw new ApiError('Dishwasher not found', 404);
 
+    Object.keys(req.body).forEach(key => {
+        dishwasher[key] = req.body[key];
+    });
+
+    await dishwasher.save();
+
+
     if (req.files && req.files.length > 0) {
         const oldImages = dishwasher.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        dishwasher.images = [...oldImages, ...newImages];
-        await dishwasher.save();
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
-                deleteFile(`${uploadPath}/${path}`);
+                fs.unlinkSync(`${uploadPath}/${path}`);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(err);
                 }
             }
         });
-    } else {
-        await dishwasher.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        dishwasher.images = newImages;
     }
+
+    // if (req.files && req.files.length > 0) {
+    //     const oldImages = dishwasher.images;
+    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
+    //     dishwasher.images = [...oldImages, ...newImages];
+    //     await dishwasher.save();
+
+    //     oldImages.forEach(image => {
+    //         const path = image.split('/').pop();
+    //         try {
+    //             deleteFile(`${uploadPath}/${path}`);
+    //         } catch (err) {
+    //             if (err.code !== 'ENOENT') {
+    //                 console.error(err);
+    //             }
+    //         }
+    //     });
+    // } else {
+    //     await dishwasher.updateOne(req.body);
+    // }
 
     return res.status(200).json({
         success: true,

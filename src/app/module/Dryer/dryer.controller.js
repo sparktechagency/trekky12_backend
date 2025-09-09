@@ -2,6 +2,7 @@ const Dryer = require('./Dryer');
 
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 
 exports.createDryer = asyncHandler(async (req, res) => {
     const dryer = await Dryer.create(req.body);
@@ -46,25 +47,52 @@ exports.updateDryer = asyncHandler(async (req, res) => {
     const dryer = await Dryer.findById(req.params.id);
     if (!dryer) throw new ApiError('Dryer not found', 404);
 
+    Object.keys(req.body).forEach(key => {
+        dryer[key] = req.body[key];
+    });
+
+    await dryer.save();
+
+
     if (req.files && req.files.length > 0) {
         const oldImages = dryer.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        dryer.images = [...oldImages, ...newImages];
-        await dryer.save();
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
-                deleteFile(`${uploadPath}/${path}`);
+                fs.unlinkSync(`${uploadPath}/${path}`);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(err);
                 }
             }
         });
-    } else {
-        await dryer.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        dryer.images = newImages;
     }
+
+    // if (req.files && req.files.length > 0) {
+    //     const oldImages = dryer.images;
+    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
+    //     dryer.images = [...oldImages, ...newImages];
+    //     await dryer.save();
+
+    //     oldImages.forEach(image => {
+    //         const path = image.split('/').pop();
+    //         try {
+    //             deleteFile(`${uploadPath}/${path}`);
+    //         } catch (err) {
+    //             if (err.code !== 'ENOENT') {
+    //                 console.error(err);
+    //             }
+    //         }
+    //     });
+    // } else {
+    //     await dryer.updateOne(req.body);
+    // }
 
     return res.status(200).json({
         success: true,
@@ -73,12 +101,24 @@ exports.updateDryer = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.deleteDryer = asyncHandler(async (req, res) => {
+//     const dryer = await Dryer.findByIdAndDelete(req.params.id);
+//     if (!dryer) throw new ApiError('Dryer not found', 404);
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Dryer deleted successfully',
+//         dryer
+//     });
+// });
+
+
 exports.deleteDryer = asyncHandler(async (req, res) => {
-    const dryer = await Dryer.findByIdAndDelete(req.params.id);
-    if (!dryer) throw new ApiError('Dryer not found', 404);
+    const dryer = await deleteDocumentWithFiles(Dryer, req.params.id, "uploads");
+    if (!dryer) throw new ApiError("dryer not found", 404);
+
     return res.status(200).json({
         success: true,
-        message: 'Dryer deleted successfully',
-        dryer
+        message: "dryer deleted successfully (with images)",
+        dryer,
     });
 });

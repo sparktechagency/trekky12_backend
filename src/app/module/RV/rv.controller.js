@@ -1,9 +1,16 @@
 const RV = require('./RV');
 const asyncHandler = require('../../../utils/asyncHandler');
+const User = require('../User/User');
 
 exports.addRv = asyncHandler(async (req, res) => {
     console.log(req.body);
     const rv = await RV.create(req.body);
+    const user = await User.findById(req.user.id);
+    console.log(user);
+     user?.rvIds?.push(rv._id);
+    // console.log(req.user);
+    await user.save();
+    await rv.save();
     res.status(201).json({
         success: true,
         data: rv

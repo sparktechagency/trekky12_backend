@@ -55,6 +55,7 @@ exports.updateWaterPump = asyncHandler(async (req, res) => {
     Object.keys(req.body).forEach(key => {
         waterPump[key] = req.body[key];
     });
+    await waterPump.save();
 
     // if (req.files && req.files.length > 0) {
     //     const oldImages = waterPump.images;

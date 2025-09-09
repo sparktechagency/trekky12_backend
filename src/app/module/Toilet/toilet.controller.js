@@ -52,6 +52,9 @@ exports.updateToilet = asyncHandler(async (req, res) => {
         toilet[key] = req.body[key];
     });
 
+    await toilet.save();
+
+
     if (req.files && req.files.length > 0) {
         const oldImages = toilet.images;
 

@@ -4,9 +4,9 @@ const { ApiError } = require('../../../errors/errorHandler');
 
 exports.createHeater = asyncHandler(async (req, res) => {
     const heater = await Heater.create(req.body);
-    const images = req.files;
     if (!heater) throw new ApiError('Heater not created', 500);
-    
+
+    const images = req.files;
     if (images && images.length > 0) {
         const imagePaths = images.map(image => image.path);
         heater.images = imagePaths;
@@ -44,13 +44,17 @@ exports.getHeaterById = asyncHandler(async (req, res) => {
 exports.updateHeater = asyncHandler(async (req, res) => {
     const heater = await Heater.findById(req.params.id);
     if (!heater) throw new ApiError('Heater not found', 404);
+    Object.keys(req.body).forEach(key => {
+        heater[key] = req.body[key];
+    });
+
+    await heater.save();
+
 
     if (req.files && req.files.length > 0) {
         const oldImages = heater.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        heater.images = [...oldImages, ...newImages];
-        await heater.save();
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
@@ -61,9 +65,30 @@ exports.updateHeater = asyncHandler(async (req, res) => {
                 }
             }
         });
-    } else {
-        await heater.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        heater.images = newImages;
     }
+    // if (req.files && req.files.length > 0) {
+    //     const oldImages = heater.images;
+    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
+    //     heater.images = [...oldImages, ...newImages];
+    //     await heater.save();
+
+    //     oldImages.forEach(image => {
+    //         const path = image.split('/').pop();
+    //         try {
+    //             fs.unlinkSync(`${uploadPath}/${path}`);
+    //         } catch (err) {
+    //             if (err.code !== 'ENOENT') {
+    //                 console.error(err);
+    //             }
+    //         }
+    //     });
+    // } else {
+    //     await heater.updateOne(req.body);
+    // }
 
     return res.status(200).json({
         success: true,

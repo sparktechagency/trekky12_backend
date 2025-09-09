@@ -63,6 +63,9 @@ exports.updateDvd = asyncHandler(async (req, res) => {
         dvd[key] = req.body[key];
     });
 
+    await dvd.save();
+
+
     if (req.files && req.files.length > 0) {
         const oldImages = dvd.images;
 
@@ -132,4 +135,3 @@ exports.deleteDvd = asyncHandler(async (req, res) => {
         dvd,
     });
 });
-

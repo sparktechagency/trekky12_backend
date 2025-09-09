@@ -58,6 +58,9 @@ exports.updateTire = asyncHandler(async (req, res) => {
     Object.keys(req.body).forEach(key => {
         tire[key] = req.body[key];
     });
+
+    await tire.save();
+
     // if (req.files && req.files.length > 0) {
     //     const oldImages = tire.images;
     //     const newImages = req.files.map(image => image.path.replace('upload/', ''));

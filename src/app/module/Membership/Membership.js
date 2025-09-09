@@ -1,44 +1,34 @@
 const mongoose = require('mongoose');
 
 const membershipSchema = new mongoose.Schema({
-  renewalDate: {
+  name: {
+    type: String,
+  },
+  dateOfPurchase: {
     type: Date,
   },
-  expirationDate: {
-    type: Date,
+  websiteLink: {
+    type: String,
   },
-  membershipExpiration: { // dynamically extended expiration date
-    type: Date,
+  phoneNo: {
+    type: String,
   },
-  cost: {
-    type: Number,
+  accountNo: {
+    type: String,
   },
   amountPaid: {
     type: Number,
-    default: 0,
   },
-  membershipNumber: {
-    type: String,
+  membershipExpirationDate: {
+    type: Date,
   },
-  notes: {
+  note: {
     type: String,
-    default: '',
   },
   images: {
     type: [String],
     default: [],
   },
-  history: [
-    {
-      updatedAt: {
-        type: Date,
-        default: Date.now,
-      },
-      cost: Number,
-      renewalDate: Date,
-      expirationDate: Date,
-    }
-  ]
 }, { timestamps: true });
 
 const Membership = mongoose.model('Membership', membershipSchema);

@@ -5,10 +5,10 @@ const upload = require('../../../utils/uploadConfig');
 const { authenticateUser } = require('../../middleware/auth.middleware');
 
 
-router.post('/create-outdoor-radio', authenticateUser, upload.array('images'), createOutdoorRadio);
-router.get('/get-outdoor-radio', authenticateUser, getOutdoorRadio);
-router.get('/get-outdoor-radio/:id', authenticateUser, getOutdoorRadioById);
-router.put('/update-outdoor-radio/:id', authenticateUser, upload.array('images'), updateOutdoorRadio);
-router.delete   ('/delete-outdoor-radio/:id', authenticateUser, deleteOutdoorRadio);
+router.post('/create', authenticateUser, upload.array('images'), createOutdoorRadio);
+router.get('/get', authenticateUser, getOutdoorRadio);
+router.get('/get/:id', authenticateUser, getOutdoorRadioById);
+router.put('/update/:id', authenticateUser, upload.array('images'), updateOutdoorRadio);
+router.delete('/delete/:id', authenticateUser, deleteOutdoorRadio);
 
 module.exports = router;
