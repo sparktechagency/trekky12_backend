@@ -4,7 +4,7 @@ const { ApiError } = require('../../../errors/errorHandler');
 const fs = require('fs');
 const path = require('path');
 
-const deleteFile = require('../../../utils/unlinkFile');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 
 const uploadPath = path.join(__dirname, '../uploads');
 
@@ -52,25 +52,47 @@ exports.updateWaterPump = asyncHandler(async (req, res) => {
     const waterPump = await WaterPump.findById(req.params.id);
     if (!waterPump) throw new ApiError('WaterPump not found', 404);
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = waterPump.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        waterPump.images = [...oldImages, ...newImages];
-        await waterPump.save();
+    Object.keys(req.body).forEach(key => {
+        waterPump[key] = req.body[key];
+    });
 
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                deleteFile(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
+    // if (req.files && req.files.length > 0) {
+    //     const oldImages = waterPump.images;
+    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
+    //     waterPump.images = [...oldImages, ...newImages];
+    //     await waterPump.save();
+
+    //     oldImages.forEach(image => {
+    //         const path = image.split('/').pop();
+    //         try {
+    //             deleteFile(`${uploadPath}/${path}`);
+    //         } catch (err) {
+    //             if (err.code !== 'ENOENT') {
+    //                 console.error(err);
+    //             }
+    //         }
+    //     });
+    // }
+
+     if (req.files && req.files.length > 0) {
+            const oldImages = waterPump.images;
+    
+            // Delete old images from disk
+            oldImages.forEach(image => {
+                const path = image.split('/').pop();
+                try {
+                    fs.unlinkSync(`${uploadPath}/${path}`);
+                } catch (err) {
+                    if (err.code !== 'ENOENT') {
+                        console.error(err);
+                    }
                 }
-            }
-        });
-    } else {
-        await waterPump.updateOne(req.body);
-    }
+            });
+    
+            // Set only new images
+            const newImages = req.files.map(image => image.path.replace('upload/', ''));
+            waterPump.images = newImages;
+        }
 
     return res.status(200).json({
         success: true,
@@ -79,12 +101,14 @@ exports.updateWaterPump = asyncHandler(async (req, res) => {
     });
 });
 
+
 exports.deleteWaterPump = asyncHandler(async (req, res) => {
-    const waterPump = await WaterPump.findByIdAndDelete(req.params.id);
-    if (!waterPump) throw new ApiError('WaterPump not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'WaterPump deleted successfully',
-        waterPump
-    });
+  const waterPump = await deleteDocumentWithFiles(WaterPump, req.params.id, "uploads");
+  if (!waterPump) throw new ApiError("WaterPump not found", 404);
+
+  return res.status(200).json({
+    success: true,
+    message: "WaterPump deleted successfully (with images)",
+    waterPump,
+  });
 });

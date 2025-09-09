@@ -2,6 +2,8 @@ const express = require('express');
 const connectDB = require('./config/db');
 const app = express();
 const cors = require('cors');
+const path = require("path");
+const fs = require("fs");
 // const authRoutes = require('./routes/auth.routes'); 
 // const userRoutes = require('./routes/user.routes');
 // const rvRoutes = require('./routes/rv.routes');
@@ -15,6 +17,7 @@ const dotenv = require('dotenv');
 // const tripsRoutes = require('./routes/trips.routes');
 // const chassisRoutes = require('./routes/chessis.routes');
 // const tireRoutes = require('./routes/appliance.routes/tire.routes');
+app.use("/", express.static(path.join(__dirname, '..')));
 
 dotenv.config();
 
@@ -75,6 +78,10 @@ app.use('/api/reports', require('./app/module/Reports/reports.router'));
 app.use('/api/expense', require('./app/module/Expense/expense.router'));
 app.use('/api/maintenance-schedule', require('./app/module/MaintenanceSchedule/maintenanceSchedule.router'));
 
+
+app.get('/', (req, res) => {
+  res.send("All ok")
+})
 
 // app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes);

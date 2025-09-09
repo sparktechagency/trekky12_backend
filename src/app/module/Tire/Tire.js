@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
 
 const tireSchema = new mongoose.Schema({
-    name: {
-        type: String,
+    manufacturer: {
+        type: String
     },
-    modelNumber: {
-        type: String,
+    tireSize: {
+        type: String
     },
     dateOfPurchase: {
         type: Date,
@@ -15,6 +15,9 @@ const tireSchema = new mongoose.Schema({
     },
     cost: {
         type: Number,
+    },
+    note: {
+        type: String
     },
     images: [{
         type: String,
