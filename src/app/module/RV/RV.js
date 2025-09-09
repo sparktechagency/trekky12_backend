@@ -13,8 +13,11 @@ const rvSchema = new mongoose.Schema({
     modelName: {
         type: String,
     },
-    modelNumber: {
+    modelYear: {
         type: String,
+    },
+    model: {
+        type: String
     },
     dateOfPurchase: {
         type: Date,
@@ -22,8 +25,8 @@ const rvSchema = new mongoose.Schema({
     amountPaid: {
         type: Number,
     },
-    newOrUsed: {
-        type: String,
+    condition: {
+        type: String
     },
     currentMileage: {
         type: Number,
