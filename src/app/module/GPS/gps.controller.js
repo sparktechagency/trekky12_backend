@@ -2,6 +2,10 @@ const Gps = require('./Gps');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const fs = require('fs');
+const path = require('path');
+
+const uploadPath = path.join(__dirname, '../../../uploads');
 
 exports.createGps = asyncHandler(async (req, res) => {
     const gps = await Gps.create(req.body);

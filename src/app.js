@@ -4,6 +4,7 @@ const app = express();
 const cors = require('cors');
 const path = require("path");
 const fs = require("fs");
+const { errorHandler } = require('./errors/errorHandler');
 // const authRoutes = require('./routes/auth.routes'); 
 // const userRoutes = require('./routes/user.routes');
 // const rvRoutes = require('./routes/rv.routes');
@@ -58,6 +59,7 @@ app.use('/api/heater', require('./app/module/Heater/heater.router'));
 app.use('/api/air-condition', require('./app/module/Air-condition/air-condition.router'));
 app.use('/api/water-pump', require('./app/module/WaterPump/waterPump.router'));
 app.use('/api/washer', require('./app/module/Washer/washer.router'));
+app.use('/api/water-heater', require('./app/module/WaterHeater/waterHeater.router'));
 app.use('/api/toilet', require('./app/module/Toilet/toilet.router'));
 app.use('/api/dryer', require('./app/module/Dryer/dryer.router'));
 app.use('/api/tv', require('./app/module/TV/tv.router'));
@@ -96,5 +98,15 @@ app.get('/', (req, res) => {
 // app.use('/api/appliance/tire', tireRoutes);
 // app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: `Route ${req.originalUrl} not found`
+  });
+});
+
+// Global error handler middleware (must be last)
+app.use(errorHandler);
 
 module.exports = app;
