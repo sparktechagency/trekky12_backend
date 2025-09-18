@@ -160,6 +160,31 @@ exports.forgotPassword = async (req, res, next) => {
     }
 };
 
+// RESEND PASSWORD RESET CODE
+exports.resendPasswordResetCode = async (req, res, next) => {
+    const { email } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user) throw new ApiError('User not found', 404);
+        if (!user.passwordResetCode) throw new ApiError('No password reset code available', 400);
+
+        const resetCode = tokenService.generateVerificationCode();
+        user.passwordResetCode = resetCode;
+        user.passwordResetCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        await user.save();
+        await emailService.sendPasswordResetCode(email, resetCode);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password reset code resent to your email.'
+        });
+    } catch (err) {
+        return next(err);
+    }
+};
+
+
 
 // VERIFY CODE (for generic code verification, e.g. resend/validate)
 exports.verifyCode = async (req, res, next) => {
