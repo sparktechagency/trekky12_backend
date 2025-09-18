@@ -222,12 +222,20 @@ exports.resetPassword = async (req, res) => {
 exports.resendVerificationCode = async (req, res, next) => {
     const { email } = req.body;
     try {
-        const user = await User.findOne({ email });
-        if (!user) throw new ApiError('User not found', 404);
+        let user = await User.findOne({ email });
+        
+        // If user is not found, check in TempUser
+        if (!user) {
+            user = await TempUser.findOne({ email });
+            if (!user) throw new ApiError('User not found', 404);
+        }
+
         if (user.isVerified) throw new ApiError('Email already verified', 403);
         const code = tokenService.generateVerificationCode();
-        user.verificationCode = { code, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
+        user.verificationCode = code; // Store only the code as a string
+        user.verificationCodeExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // Separate expiration field
         await user.save();
+
         // Send verification code
         await emailService.sendVerificationCode(email, code);
 

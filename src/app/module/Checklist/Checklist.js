@@ -1,14 +1,23 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const checklistSchema = new mongoose.Schema({
+const checklistSchema = new mongoose.Schema(
+  {
     title: {
-        type: String,
+      type: String,
     },
-    items: [{
+    items: [
+      {
         type: String,
-    }]
-}, { timestamps: true });
-    
-const Checklist = mongoose.model('Checklist', checklistSchema);
+      },
+    ],
+    rvId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "RV",
+    },
+  },
+  { timestamps: true }
+);
+
+const Checklist = mongoose.model("Checklist", checklistSchema);
 
 module.exports = Checklist;

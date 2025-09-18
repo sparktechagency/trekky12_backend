@@ -5,6 +5,7 @@ const deleteDocumentWithFiles = require("../../../utils/deleteDocumentWithImages
 const QueryBuilder = require("../../../builder/queryBuilder");
 
 exports.createChecklist = asyncHandler(async (req, res) => {
+  const userId = req.user.id || req.user._id;
   const checklist = await Checklist.create(req.body);
   if (!checklist) throw new ApiError("checklist doesn't created!", 500);
 
