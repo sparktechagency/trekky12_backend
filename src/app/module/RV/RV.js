@@ -63,8 +63,16 @@ const rvSchema = new mongoose.Schema({
     },
     weight: {
         type: Number,
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    chassis: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Chassis'
     }
-    
 }, {
     timestamps: true
 });

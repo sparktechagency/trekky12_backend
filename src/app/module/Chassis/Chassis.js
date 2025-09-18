@@ -25,6 +25,16 @@ const chassisSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    rvId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RV',
+        required: true
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     hp: {
         type: Number,
         required: true

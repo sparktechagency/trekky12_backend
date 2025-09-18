@@ -109,28 +109,37 @@ exports.verifyEmail = async (req, res, next) => {
 exports.login = async (req, res, next) => {
     const { email, password } = req.body;
     try {
-        const user = await User.findOne({ email }).select('+password');
+        const user = await User.findOne({ email }).select('+password').populate('rvIds');
 
         if (!user) throw new ApiError('User not found', 404);
 
         if (!user?.isVerified) throw new ApiError('Email not verified', 403);
 
-        // Check if user or owner exists
-        const existingUser = user;
-        if (!existingUser) throw new ApiError('User not found', 404);
-
         // Check if user password matches
-        const isMatch = await bcrypt.compare(password, existingUser.password);
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) throw new ApiError('Invalid email or password', 401);
+        
         // Generate tokens
-        const accessToken = tokenService.generateAccessToken({ id: existingUser._id, role: existingUser.role });
-        const refreshToken = tokenService.generateRefreshToken({ id: existingUser._id, role: existingUser.role });
+        const accessToken = tokenService.generateAccessToken({ id: user._id, role: user.role });
+        const refreshToken = tokenService.generateRefreshToken({ id: user._id, role: user.role });
+        
+        const rvDetails = user.rvIds.map(rv => ({
+            id: rv._id,
+            chassisId: rv.chassis // Directly accessing chassisId assuming it exists in rv schema
+        }));
+        
         return res.status(200).json({
             success: true,
             message: 'Login successful',
             accessToken,
             refreshToken,
-            user: { id: existingUser._id, name: existingUser.name, email: existingUser.email, rv: existingUser.rvIds.length }
+            user: { 
+                id: user._id, 
+                name: user.name, 
+                email: user.email, 
+                rv: rvDetails ,
+                
+            }
         });
     } catch (err) {
         return next(err);
