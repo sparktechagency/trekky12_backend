@@ -6,24 +6,19 @@ const chassisSchema = new mongoose.Schema({
         required: true
     },
     modelNo: {
-        type: String,
-        required: true
+        type: String
     },
     name: {
-        type: String,
-        required: true
+        type: String
     },
     serialId: {
-        type: String,
-        required: true
+        type: String
     },
     fuelType: {
-        type: String,
-        required: true
+        type: String
     },
     engineModel: {
-        type: String,
-        required: true
+        type: String
     },
     rvId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -41,32 +36,26 @@ const chassisSchema = new mongoose.Schema({
     },
     belt: [{
         name: {
-            type: String,
-            required: true
+            type: String
         },
         partNo: {
-            type: Number,
-            required: true
+            type: Number
         }
     }],
     fuelFilter: [{
         name: {
-            type: String,
-            required: true
+            type: String
         },
         partNo: {
-            type: Number,
-            required: true
+            type: Number
         }
     }],
     oilFilter: [{
         name: {
-            type: String,
-            required: true
+            type: String
         },
         partNo: {
-            type: Number,
-            required: true
+            type: Number
         }
     }]
 },

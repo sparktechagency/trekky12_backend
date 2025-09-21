@@ -9,8 +9,11 @@ const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createTire = asyncHandler(async (req, res) => {
-
-    const tire = await Tire.create(req.body);
+    const user = req.user.id || req.user._id;
+    const tire = await Tire.create({
+        ...req.body,
+        user,
+    });
     const images = req.files;
     if (!tire) throw new ApiError('Tire not created', 500);
 
@@ -30,7 +33,8 @@ exports.createTire = asyncHandler(async (req, res) => {
 
 
 exports.getTire = asyncHandler(async (req, res) => {
-    const tire = await Tire.find();
+    const user = req.user.id || req.user._id;
+    const tire = await Tire.find({ user });
     if (!tire) throw new ApiError('Tire not found', 404);
     return res.status(200).json({
         success: true,
@@ -40,6 +44,7 @@ exports.getTire = asyncHandler(async (req, res) => {
 });
 
 exports.getTireById = asyncHandler(async (req, res) => {
+    const user = req.user.id || req.user._id;
     const tire = await Tire.findById(req.params.id);
     if (!tire) throw new ApiError('Tire not found', 404);
     return res.status(200).json({
@@ -50,6 +55,7 @@ exports.getTireById = asyncHandler(async (req, res) => {
 });
 
 exports.updateTire = asyncHandler(async (req, res) => {
+    const user = req.user.id || req.user._id;
     const tire = await Tire.findById(req.params.id);
     if (!tire) throw new ApiError('Tire not found', 404);
 

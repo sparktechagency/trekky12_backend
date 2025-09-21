@@ -21,7 +21,17 @@ const tireSchema = new mongoose.Schema({
     },
     images: [{
         type: String,
-    }]
+    }],
+    rvId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RV',
+        required: true
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    }
 }, {
     timestamps: true
 });

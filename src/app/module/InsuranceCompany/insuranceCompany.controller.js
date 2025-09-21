@@ -4,9 +4,13 @@ const { ApiError } = require('../../../errors/errorHandler');
 const deleteFile = require('../../../utils/unlinkFile');
 
 exports.createInsuranceCompany = asyncHandler(async (req, res) => {
-    const insuranceCompany = await InsuranceCompany.create(req.body);
+    const user = req.user.id || req.user._id;
+    const insuranceCompany = await InsuranceCompany.create({
+        ...req.body,
+        user,
+    });
     if (!insuranceCompany) throw new ApiError('InsuranceCompany not created', 500);
-    const images = req.files.map(file => file.path);
+    const images = req.file.path;
     insuranceCompany.images = images;
     await insuranceCompany.save();
     res.status(201).json({
@@ -17,7 +21,8 @@ exports.createInsuranceCompany = asyncHandler(async (req, res) => {
 });
 
 exports.getInsuranceCompany = asyncHandler(async (req, res) => {
-    const insuranceCompany = await InsuranceCompany.find();
+    const user = req.user.id || req.user._id;
+    const insuranceCompany = await InsuranceCompany.find({ user });
     if (!insuranceCompany) throw new ApiError('InsuranceCompany not found', 404);
     return res.status(200).json({
         success: true,
@@ -27,6 +32,7 @@ exports.getInsuranceCompany = asyncHandler(async (req, res) => {
 });
 
 exports.getInsuranceCompanyById = asyncHandler(async (req, res) => {
+    const user = req.user.id || req.user._id;
     const insuranceCompany = await InsuranceCompany.findById(req.params.id);
     if (!insuranceCompany) throw new ApiError('InsuranceCompany not found', 404);
     return res.status(200).json({
@@ -38,16 +44,29 @@ exports.getInsuranceCompanyById = asyncHandler(async (req, res) => {
 
 
 exports.updateInsurance = asyncHandler(async (req, res) => {
+    // const user = req.user.id || req.user._id;
     const insuranceCompany = await InsuranceCompany.findById(req.params.id);
     if (!insuranceCompany) throw new ApiError('InsuranceCompany not found', 404);
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = insuranceCompany.images;
-        const newImages = req.files.map(image => image.path);
-        insuranceCompany.images = [...oldImages, ...newImages];
-        await insuranceCompany.save();
-    } else {
-        await insuranceCompany.updateOne(req.body);
+    Object.keys(req.body).forEach(key => {
+        insuranceCompany[key] = req.body[key];
+    });
+
+    if (req.file) {
+        const oldImage = insuranceCompany.images;
+
+        // Delete old image from disk
+        try {
+            fs.unlinkSync(`${uploadPath}/${oldImage}`);
+        } catch (err) {
+            if (err.code !== 'ENOENT') {
+                console.error(err);
+            }
+        }
+
+        // Set only new image
+        const newImage = req.file.path.replace('upload/', '');
+        insuranceCompany.images = newImage;
     }
 
     return res.status(200).json({
