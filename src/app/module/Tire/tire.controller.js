@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
-
+const getSelectedRvByUserId = require('../../../utils/currentRv')
 const deleteFile = require('../../../utils/unlinkFile');
 
 const uploadPath = path.join(__dirname, '../uploads');
