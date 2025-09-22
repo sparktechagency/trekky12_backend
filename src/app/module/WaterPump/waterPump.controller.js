@@ -25,7 +25,7 @@ exports.createWaterPump = asyncHandler(async (req, res) => {
     if (!waterPump) throw new ApiError('WaterPump not created', 500);
 
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         waterPump.images = imagePaths;
         await waterPump.save();
     }
@@ -111,7 +111,7 @@ exports.updateWaterPump = asyncHandler(async (req, res) => {
         });
 
         // Set only new images
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        const newImages = req.files.map(image => image.location);
         waterPump.images = newImages;
     }
 

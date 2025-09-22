@@ -25,7 +25,7 @@ exports.createWaterHeater = asyncHandler(async (req, res) => {
     if (!waterHeater) throw new ApiError('WaterHeater not created', 500);
 
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         waterHeater.images = imagePaths;
         await waterHeater.save();
     }
@@ -118,7 +118,7 @@ exports.updateWaterHeater = asyncHandler(async (req, res) => {
         });
 
         // Set only new images
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        const newImages = req.files.map(image => image.location);
         waterHeater.images = newImages;
     }
 

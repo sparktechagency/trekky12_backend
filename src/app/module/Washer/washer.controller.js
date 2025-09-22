@@ -25,7 +25,7 @@ exports.createWasher = asyncHandler(async (req, res) => {
     if (!washer) throw new ApiError('Washer not created', 500);
 
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         washer.images = imagePaths;
         await washer.save();
     }
@@ -118,7 +118,7 @@ exports.updateWasher = asyncHandler(async (req, res) => {
         });
 
         // Set only new images
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        const newImages = req.files.map(image => image.location);
         washer.images = newImages;
     }
 

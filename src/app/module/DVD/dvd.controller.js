@@ -1,48 +1,80 @@
 const Dvd = require('./Dvd');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
+const fs = require('fs');
+const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv')
+const deleteFile = require('../../../utils/unlinkFile');
 
-// exports.createDvd = asyncHandler(async (req, res) => {
-//     const dvd = await Dvd.create(req.body);
-//     if (!dvd) throw new ApiError('Dvd not created', 500);
-//     res.status(201).json({
-//         success: true,
-//         message: 'Dvd created successfully',
-//         dvd
-//     });
-// });
-
+const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createDvd = asyncHandler(async (req, res) => {
-    const dvd = await Dvd.create(req.body);
-    if (!dvd) throw new ApiError('dvd not created', 500);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    const dvd = await Dvd.create({
+        rvId,
+        ...req.body,
+        user: userId,
+    });
     const images = req.files;
-    if (!images) throw new ApiError('No images uploaded', 400);
+    if (!dvd) throw new ApiError('DVD not created', 500);
 
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         dvd.images = imagePaths;
         await dvd.save();
     }
 
-    return res.status(201).json({
+    res.status(201).json({
         success: true,
-        message: 'dvd created successfully',
+        message: 'DVD created successfully',
         dvd
     });
 });
 
 exports.getDvd = asyncHandler(async (req, res) => {
-    const dvd = await Dvd.find();
-    if (!dvd) throw new ApiError('Dvd not found', 404);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    const baseQuery = { user: userId, rvId };
+    const s = { ...req.query, ...baseQuery };
+
+    const dvdsQuery = new QueryBuilder(
+        Dvd.find(baseQuery),
+        req.query
+    )
+    
+    const dvds = await dvdsQuery
+        .search(['name', 'modelNumber'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        Dvd.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!dvds || dvds.length === 0) {
+        throw new ApiError('DVDs not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
-        message: 'Dvd retrieved successfully',
-        dvd
+        message: 'DVD retrieved successfully',
+        meta,
+        dvds
     });
 });
-
 
 exports.getDvdById = asyncHandler(async (req, res) => {
     const dvd = await Dvd.findById(req.params.id);
@@ -54,57 +86,23 @@ exports.getDvdById = asyncHandler(async (req, res) => {
     });
 });
 
-
 exports.updateDvd = asyncHandler(async (req, res) => {
     const dvd = await Dvd.findById(req.params.id);
     if (!dvd) throw new ApiError('Dvd not found', 404);
 
+    // Update dvd fields from req.body
     Object.keys(req.body).forEach(key => {
         dvd[key] = req.body[key];
     });
 
     await dvd.save();
 
-
     if (req.files && req.files.length > 0) {
-        const oldImages = dvd.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        // For S3, we don't need to delete old files manually as they're managed by AWS
+        // Just replace with new images
+        const newImages = req.files.map(image => image.location);
         dvd.images = newImages;
     }
-
-    // if (req.files && req.files.length > 0) {
-    //     const oldImages = dvd.images;
-    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
-    //     dvd.images = [...oldImages, ...newImages];
-    //     await dvd.save();
-
-    //     oldImages.forEach(image => {
-    //         const path = image.split('/').pop();
-    //         try {
-    //             deleteFile(`${uploadPath}/${path}`);
-    //         } catch (err) {
-    //             if (err.code !== 'ENOENT') {
-    //                 console.error(err);
-    //             }
-    //         }
-    //     });
-    // } else {
-    //     await dvd.updateOne(req.body);
-    // }
 
     return res.status(200).json({
         success: true,
@@ -113,25 +111,13 @@ exports.updateDvd = asyncHandler(async (req, res) => {
     });
 });
 
-
-// exports.deleteDvd = asyncHandler(async (req, res) => {
-//     const dvd = await Dvd.findByIdAndDelete(req.params.id);
-//     if (!dvd) throw new ApiError('Dvd not found', 404);
-//     return res.status(200).json({
-//         success: true,
-//         message: 'Dvd deleted successfully',
-//         dvd
-//     });
-// });
-
-
 exports.deleteDvd = asyncHandler(async (req, res) => {
     const dvd = await deleteDocumentWithFiles(Dvd, req.params.id, "uploads");
-    if (!dvd) throw new ApiError("dvd not found", 404);
+    if (!dvd) throw new ApiError("DVD not found", 404);
 
     return res.status(200).json({
         success: true,
-        message: "dvd deleted successfully (with images)",
+        message: "DVD deleted successfully",
         dvd,
     });
 });
