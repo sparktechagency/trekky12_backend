@@ -3,19 +3,21 @@ const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 const fs = require('fs');
 const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 
 const deleteFile = require('../../../utils/unlinkFile');
 
 const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createTire = asyncHandler(async (req, res) => {
-    const user = req.user.id || req.user._id;
-    const selectedRvId = req.user.selectedRvId;
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
 
     const tire = await Tire.create({
         rvId: selectedRvId,
         ...req.body,
-        user,
+        user: userId,
     });
     const images = req.files;
     if (!tire) throw new ApiError('Tire not created', 500);
@@ -35,20 +37,92 @@ exports.createTire = asyncHandler(async (req, res) => {
 
 
 
+
+
+// exports.getAirConditions = asyncHandler(async (req, res) => {
+//     const userId = req.user.id || req.user._id;
+//     const selectedRvId = await getSelectedRvByUserId(userId);
+    
+//     // Base query with user and RV filters
+//     const baseQuery = { user: userId, rvId: selectedRvId };
+    
+//     // Merge base query with request query parameters
+//     const mergedQuery = { ...req.query, ...baseQuery };
+    
+//     // Initialize QueryBuilder with the base model query
+//     const airConditionQuery = new QueryBuilder(
+//         AirCondition.find(baseQuery),
+//         req.query
+//     );
+    
+//     // Apply query builder methods for filtering, sorting, pagination, and field selection
+//     const airConditions = await airConditionQuery
+//         .search(['name', 'brand', 'model', 'description']) // Add searchable fields as needed
+//         .filter()
+//         .sort()
+//         .paginate()
+//         .fields()
+//         .modelQuery;
+    
+//     // Get pagination metadata
+//     const meta = await new QueryBuilder(
+//         AirCondition.find(baseQuery),
+//         req.query
+//     ).countTotal();
+    
+//     if (!airConditions || airConditions.length === 0) {
+//         throw new ApiError('AirConditions not found', 404);
+//     }
+    
+//     return res.status(200).json({
+//         success: true,
+//         message: 'AirConditions retrieved successfully',
+//         meta,
+//         airConditions
+//     });
+// });
+
+
+
 exports.getTire = asyncHandler(async (req, res) => {
-    const user = req.user.id || req.user._id;
-    const tire = await Tire.find({ user, rvId: req.user.selectedRvId });
-    if (!tire) throw new ApiError('Tire not found', 404);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+
+    const baseQuery = { user: userId, rvId: selectedRvId };
+    const s = { ...req.query, ...baseQuery };
+
+    const tiresQuery = new QueryBuilder(
+        Tire.find(baseQuery),
+        req.query
+    )
+    
+    const tires = await tiresQuery
+        .search(['name', 'brand'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        Tire.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!tires || tires.length === 0) {
+        throw new ApiError('Tires not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
         message: 'Tire retrieved successfully',
-        tire
+        meta,
+        tires
     });
 });
 
 exports.getTireById = asyncHandler(async (req, res) => {
-    const user = req.user.id || req.user._id;
-    const tire = await Tire.findById(req.params.id, { user, rvId: req.user.selectedRvId });
+    const tire = await Tire.findById(req.params.id);
     if (!tire) throw new ApiError('Tire not found', 404);
     return res.status(200).json({
         success: true,
@@ -58,8 +132,7 @@ exports.getTireById = asyncHandler(async (req, res) => {
 });
 
 exports.updateTire = asyncHandler(async (req, res) => {
-    const user = req.user.id || req.user._id;
-    const tire = await Tire.findById(req.params.id, { user, rvId: req.user.selectedRvId });
+    const tire = await Tire.findById(req.params.id);
     if (!tire) throw new ApiError('Tire not found', 404);
 
 
@@ -116,25 +189,13 @@ exports.updateTire = asyncHandler(async (req, res) => {
 });
 
 exports.deleteTire = asyncHandler(async (req, res) => {
-    const tire = await Tire.findByIdAndDelete(req.params.id);
-    if (!tire) throw new ApiError('Tire not found', 404);
-
-    const images = tire.images;
-    images.forEach(image => {
-        const path = image.split('/').pop();
-        try {
-            fs.unlinkSync(`${uploadPath}/${path}`);
-        } catch (err) {
-            if (err.code !== 'ENOENT') {
-                console.error(err);
-            }
-        }
-    });
+    const tire = await deleteDocumentWithFiles(Tire, req.params.id, "uploads");
+    if (!tire) throw new ApiError("tire not found", 404);
 
     return res.status(200).json({
         success: true,
-        message: 'Tire deleted successfully',
-        tire
+        message: "tire deleted successfully (with images)",
+        tire,
     });
 });
 

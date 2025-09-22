@@ -52,7 +52,8 @@ const userSchema = new mongoose.Schema({
     },
     selectedRvId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'RV'
+        ref: 'RV',
+        default: null
     },
     createdAt: {
         type: Date,

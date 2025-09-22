@@ -8,7 +8,8 @@ const QueryBuilder = require('../../../builder/queryBuilder')
 exports.createAirCondition = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    const airCondition = await AirCondition.create({ ...req.body, user: userId, rvId: selectedRvId });
+    if(!selectedRvId) throw new ApiError('No selected RV found', 404);
+    const airCondition = await AirCondition.create({ ...req.body, user: userId, rvId: req.body.rvId || selectedRvId });
     const images = req.files;
     if (!airCondition) throw new ApiError('AirCondition not created', 500);
     
@@ -28,7 +29,7 @@ exports.createAirCondition = asyncHandler(async (req, res) => {
 exports.getAirConditions = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    
+    if(!selectedRvId) throw new ApiError('No selected RV found', 404);    
     // Base query with user and RV filters
     const baseQuery = { user: userId, rvId: selectedRvId };
     
