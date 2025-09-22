@@ -3,21 +3,33 @@ const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 const fs = require('fs');
 const path = require('path');
-
+const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv')
+const deleteFile = require('../../../utils/unlinkFile');
 
 const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createWaterPump = asyncHandler(async (req, res) => {
-    const waterPump = await WaterPump.create(req.body);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    const waterPump = await WaterPump.create({
+        rvId,
+        ...req.body,
+        user: userId,
+    });
     const images = req.files;
     if (!waterPump) throw new ApiError('WaterPump not created', 500);
-    
+
     if (images && images.length > 0) {
         const imagePaths = images.map(image => image.path);
         waterPump.images = imagePaths;
         await waterPump.save();
     }
+
     res.status(201).json({
         success: true,
         message: 'WaterPump created successfully',
@@ -25,17 +37,44 @@ exports.createWaterPump = asyncHandler(async (req, res) => {
     });
 });
 
+exports.getWaterPump = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    const baseQuery = { user: userId, rvId };
+    const s = { ...req.query, ...baseQuery };
 
-exports.getWaterPumps = asyncHandler(async (req, res) => {
-    const waterPumps = await WaterPump.find();
-    if (!waterPumps) throw new ApiError('WaterPumps not found', 404);
+    const waterPumpQuery = new QueryBuilder(
+        WaterPump.find(baseQuery),
+        req.query
+    )
+    
+    const waterPump = await waterPumpQuery
+        .search(['name', 'modelNumber'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        WaterPump.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!waterPump || waterPump.length === 0) {
+        throw new ApiError('WaterPump not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
-        message: 'WaterPumps retrieved successfully',
-        waterPumps
+        message: 'WaterPump retrieved successfully',
+        meta,
+        waterPump
     });
 });
-
 
 exports.getWaterPumpById = asyncHandler(async (req, res) => {
     const waterPump = await WaterPump.findById(req.params.id);
@@ -47,7 +86,6 @@ exports.getWaterPumpById = asyncHandler(async (req, res) => {
     });
 });
 
-
 exports.updateWaterPump = asyncHandler(async (req, res) => {
     const waterPump = await WaterPump.findById(req.params.id);
     if (!waterPump) throw new ApiError('WaterPump not found', 404);
@@ -57,43 +95,25 @@ exports.updateWaterPump = asyncHandler(async (req, res) => {
     });
     await waterPump.save();
 
-    // if (req.files && req.files.length > 0) {
-    //     const oldImages = waterPump.images;
-    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
-    //     waterPump.images = [...oldImages, ...newImages];
-    //     await waterPump.save();
+    if (req.files && req.files.length > 0) {
+        const oldImages = waterPump.images;
 
-    //     oldImages.forEach(image => {
-    //         const path = image.split('/').pop();
-    //         try {
-    //             deleteFile(`${uploadPath}/${path}`);
-    //         } catch (err) {
-    //             if (err.code !== 'ENOENT') {
-    //                 console.error(err);
-    //             }
-    //         }
-    //     });
-    // }
-
-     if (req.files && req.files.length > 0) {
-            const oldImages = waterPump.images;
-    
-            // Delete old images from disk
-            oldImages.forEach(image => {
-                const path = image.split('/').pop();
-                try {
-                    fs.unlinkSync(`${uploadPath}/${path}`);
-                } catch (err) {
-                    if (err.code !== 'ENOENT') {
-                        console.error(err);
-                    }
+        // Delete old images from disk
+        oldImages.forEach(image => {
+            const path = image.split('/').pop();
+            try {
+                fs.unlinkSync(`${uploadPath}/${path}`);
+            } catch (err) {
+                if (err.code !== 'ENOENT') {
+                    console.error(err);
                 }
-            });
-    
-            // Set only new images
-            const newImages = req.files.map(image => image.path.replace('upload/', ''));
-            waterPump.images = newImages;
-        }
+            }
+        });
+
+        // Set only new images
+        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        waterPump.images = newImages;
+    }
 
     return res.status(200).json({
         success: true,
