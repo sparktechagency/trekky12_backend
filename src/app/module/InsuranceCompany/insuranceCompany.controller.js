@@ -10,7 +10,7 @@ exports.createInsuranceCompany = asyncHandler(async (req, res) => {
         user,
     });
     if (!insuranceCompany) throw new ApiError('InsuranceCompany not created', 500);
-    const images = req.file.path;
+    const images = req?.file?.path;
     insuranceCompany.images = images;
     await insuranceCompany.save();
     res.status(201).json({

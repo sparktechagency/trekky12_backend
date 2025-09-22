@@ -62,3 +62,20 @@ exports.deleteAccount = asyncHandler(async (req, res) => {
         message: 'Account deleted successfully'
     });
 });
+
+
+exports.selectRV = asyncHandler(async (req, res) => {
+    const { rvId } = req.body;
+    const user = await User.findById(req.user.id); // get user from database
+    if (!user) throw new ApiError('User not found', 404); // if user does not exist, throw error
+    if (user.rvIds.length > 1) {
+        user.selectedRvId = rvId; // update user selected rv id
+    }else {
+        user.selectedRvId = user.rvIds[0]; // update user selected rv id
+    }
+    await user.save(); // save user to database
+    return res.status(200).json({ // return success message
+        success: true,
+        message: 'RV selected successfully'
+    });
+});

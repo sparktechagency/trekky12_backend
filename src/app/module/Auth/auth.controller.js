@@ -127,6 +127,7 @@ exports.login = async (req, res, next) => {
             id: rv._id,
             chassisId: rv.chassis // Directly accessing chassisId assuming it exists in rv schema
         }));
+
         
         return res.status(200).json({
             success: true,
@@ -138,6 +139,7 @@ exports.login = async (req, res, next) => {
                 name: user.name, 
                 email: user.email, 
                 rv: rvDetails ,
+                selectedRvId: user.selectedRvId
                 
             }
         });

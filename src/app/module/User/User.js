@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now() + 10 * 60 * 1000
     },
+    selectedRvId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RV'
+    },
     createdAt: {
         type: Date,
         default: Date.now
