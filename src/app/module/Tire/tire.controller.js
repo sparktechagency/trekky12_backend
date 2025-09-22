@@ -7,8 +7,10 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv')
 const deleteFile = require('../../../utils/unlinkFile');
-
 const uploadPath = path.join(__dirname, '../uploads');
+
+
+
 
 exports.createTire = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -36,54 +38,6 @@ exports.createTire = asyncHandler(async (req, res) => {
         tire
     });
 });
-
-
-
-
-
-// exports.getAirConditions = asyncHandler(async (req, res) => {
-//     const userId = req.user.id || req.user._id;
-//     const selectedRvId = await getSelectedRvByUserId(userId);
-    
-//     // Base query with user and RV filters
-//     const baseQuery = { user: userId, rvId: selectedRvId };
-    
-//     // Merge base query with request query parameters
-//     const mergedQuery = { ...req.query, ...baseQuery };
-    
-//     // Initialize QueryBuilder with the base model query
-//     const airConditionQuery = new QueryBuilder(
-//         AirCondition.find(baseQuery),
-//         req.query
-//     );
-    
-//     // Apply query builder methods for filtering, sorting, pagination, and field selection
-//     const airConditions = await airConditionQuery
-//         .search(['name', 'brand', 'model', 'description']) // Add searchable fields as needed
-//         .filter()
-//         .sort()
-//         .paginate()
-//         .fields()
-//         .modelQuery;
-    
-//     // Get pagination metadata
-//     const meta = await new QueryBuilder(
-//         AirCondition.find(baseQuery),
-//         req.query
-//     ).countTotal();
-    
-//     if (!airConditions || airConditions.length === 0) {
-//         throw new ApiError('AirConditions not found', 404);
-//     }
-    
-//     return res.status(200).json({
-//         success: true,
-//         message: 'AirConditions retrieved successfully',
-//         meta,
-//         airConditions
-//     });
-// });
-
 
 
 exports.getTire = asyncHandler(async (req, res) => {
