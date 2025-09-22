@@ -8,8 +8,10 @@ const QueryBuilder = require('../../../builder/queryBuilder')
 exports.createAirCondition = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    if(!selectedRvId) throw new ApiError('No selected RV found', 404);
-    const airCondition = await AirCondition.create({ ...req.body, user: userId, rvId: req.body.rvId || selectedRvId });
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    const airCondition = await AirCondition.create({ ...req.body, user: userId, rvId });
     const images = req.files;
     if (!airCondition) throw new ApiError('AirCondition not created', 500);
     
@@ -29,9 +31,11 @@ exports.createAirCondition = asyncHandler(async (req, res) => {
 exports.getAirConditions = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    if(!selectedRvId) throw new ApiError('No selected RV found', 404);    
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
     // Base query with user and RV filters
-    const baseQuery = { user: userId, rvId: selectedRvId };
+    const baseQuery = { user: userId, rvId };
     
     // Merge base query with request query parameters
     const mergedQuery = { ...req.query, ...baseQuery };

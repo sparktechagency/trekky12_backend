@@ -13,9 +13,11 @@ const uploadPath = path.join(__dirname, '../uploads');
 exports.createTire = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
     const tire = await Tire.create({
-        rvId: selectedRvId,
+        rvId,
         ...req.body,
         user: userId,
     });
@@ -87,8 +89,10 @@ exports.createTire = asyncHandler(async (req, res) => {
 exports.getTire = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-
-    const baseQuery = { user: userId, rvId: selectedRvId };
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    const baseQuery = { user: userId, rvId };
     const s = { ...req.query, ...baseQuery };
 
     const tiresQuery = new QueryBuilder(
