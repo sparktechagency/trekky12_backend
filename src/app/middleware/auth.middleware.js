@@ -32,6 +32,7 @@ const authenticateUser = asyncHandler(async (req, res, next) => {
       id: user._id,
       email: user.email,
       role: decoded.role,
+      selectedRvId: decoded.selectedRvId,
       ...(user.name && { name: user.name })
     };
     next();

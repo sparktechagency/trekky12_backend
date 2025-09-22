@@ -120,8 +120,8 @@ exports.login = async (req, res, next) => {
         if (!isMatch) throw new ApiError('Invalid email or password', 401);
         
         // Generate tokens
-        const accessToken = tokenService.generateAccessToken({ id: user._id, role: user.role });
-        const refreshToken = tokenService.generateRefreshToken({ id: user._id, role: user.role });
+        const accessToken = tokenService.generateAccessToken({ id: user._id, role: user.role, selectedRvId: user.selectedRvId });
+        const refreshToken = tokenService.generateRefreshToken({ id: user._id, role: user.role, selectedRvId: user.selectedRvId });
         
         const rvDetails = user.rvIds.map(rv => ({
             id: rv._id,

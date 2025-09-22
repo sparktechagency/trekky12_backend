@@ -24,6 +24,11 @@ const airConditionSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  rvId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'RV',
+    required: true
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

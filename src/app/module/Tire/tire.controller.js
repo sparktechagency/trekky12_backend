@@ -10,7 +10,10 @@ const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createTire = asyncHandler(async (req, res) => {
     const user = req.user.id || req.user._id;
+    const selectedRvId = req.user.selectedRvId;
+
     const tire = await Tire.create({
+        rvId: selectedRvId,
         ...req.body,
         user,
     });
@@ -34,7 +37,7 @@ exports.createTire = asyncHandler(async (req, res) => {
 
 exports.getTire = asyncHandler(async (req, res) => {
     const user = req.user.id || req.user._id;
-    const tire = await Tire.find({ user });
+    const tire = await Tire.find({ user, rvId: req.user.selectedRvId });
     if (!tire) throw new ApiError('Tire not found', 404);
     return res.status(200).json({
         success: true,
@@ -45,7 +48,7 @@ exports.getTire = asyncHandler(async (req, res) => {
 
 exports.getTireById = asyncHandler(async (req, res) => {
     const user = req.user.id || req.user._id;
-    const tire = await Tire.findById(req.params.id);
+    const tire = await Tire.findById(req.params.id, { user, rvId: req.user.selectedRvId });
     if (!tire) throw new ApiError('Tire not found', 404);
     return res.status(200).json({
         success: true,
@@ -56,7 +59,7 @@ exports.getTireById = asyncHandler(async (req, res) => {
 
 exports.updateTire = asyncHandler(async (req, res) => {
     const user = req.user.id || req.user._id;
-    const tire = await Tire.findById(req.params.id);
+    const tire = await Tire.findById(req.params.id, { user, rvId: req.user.selectedRvId });
     if (!tire) throw new ApiError('Tire not found', 404);
 
 
