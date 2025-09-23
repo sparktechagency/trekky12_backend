@@ -26,7 +26,7 @@ const insuranceSchema = new mongoose.Schema({
     type: String,
   },
   images: {
-    type: String
+    type: [String]
   },
   notes: {
     type: String,

@@ -1,90 +1,140 @@
 const InsuranceCompany = require('./InsuranceCompany');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
-const deleteFile = require('../../../utils/unlinkFile');
+const QueryBuilder = require('../../../builder/queryBuilder');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
 
 exports.createInsuranceCompany = asyncHandler(async (req, res) => {
-    const user = req.user.id || req.user._id;
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
     const insuranceCompany = await InsuranceCompany.create({
+        rvId,
         ...req.body,
-        user,
+        user: userId,
     });
-    if (!insuranceCompany) throw new ApiError('InsuranceCompany not created', 500);
-    const images = req?.file?.path;
-    insuranceCompany.images = images;
-    await insuranceCompany.save();
-    res.status(201).json({
+
+    if (!insuranceCompany) throw new ApiError('Insurance company not created', 500);
+
+    if (req.files && req.files.length > 0) {
+        const imagePaths = req.files.map(image => image.location);
+        insuranceCompany.images = imagePaths;
+        await insuranceCompany.save();
+    }
+
+    return res.status(201).json({
         success: true,
-        message: 'InsuranceCompany created successfully',
+        message: 'Insurance company created successfully',
         insuranceCompany
     });
 });
 
-exports.getInsuranceCompany = asyncHandler(async (req, res) => {
-    const user = req.user.id || req.user._id;
-    const insuranceCompany = await InsuranceCompany.find({ user });
-    if (!insuranceCompany) throw new ApiError('InsuranceCompany not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'InsuranceCompany retrieved successfully',
-        insuranceCompany
-    });
-});
+exports.getInsuranceCompanies = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
+    
+    const insuranceQuery = new QueryBuilder(
+        InsuranceCompany.find(baseQuery),
+        req.query
+    )
+    .search(['name', 'policyNumber', 'companyName'])
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
 
-exports.getInsuranceCompanyById = asyncHandler(async (req, res) => {
-    const user = req.user.id || req.user._id;
-    const insuranceCompany = await InsuranceCompany.findById(req.params.id);
-    if (!insuranceCompany) throw new ApiError('InsuranceCompany not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'InsuranceCompany retrieved successfully',
-        insuranceCompany
-    });
-});
+    const insuranceCompanies = await insuranceQuery.modelQuery;
+    
+    const meta = await new QueryBuilder(
+        InsuranceCompany.find(baseQuery),
+        req.query
+    ).countTotal();
 
-
-exports.updateInsurance = asyncHandler(async (req, res) => {
-    // const user = req.user.id || req.user._id;
-    const insuranceCompany = await InsuranceCompany.findById(req.params.id);
-    if (!insuranceCompany) throw new ApiError('InsuranceCompany not found', 404);
-
-    Object.keys(req.body).forEach(key => {
-        insuranceCompany[key] = req.body[key];
-    });
-
-    if (req.file) {
-        const oldImage = insuranceCompany.images;
-
-        // Delete old image from disk
-        try {
-            fs.unlinkSync(`${uploadPath}/${oldImage}`);
-        } catch (err) {
-            if (err.code !== 'ENOENT') {
-                console.error(err);
-            }
-        }
-
-        // Set only new image
-        const newImage = req.file.path.replace('upload/', '');
-        insuranceCompany.images = newImage;
+    if (!insuranceCompanies || insuranceCompanies.length === 0) {
+        throw new ApiError('No insurance companies found', 404);
     }
 
     return res.status(200).json({
         success: true,
-        message: 'InsuranceCompany updated successfully',
-        insuranceCompany
-    }); 
+        message: 'Insurance companies retrieved successfully',
+        meta,
+        insuranceCompanies
+    });
 });
 
+exports.getInsuranceCompanyById = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    const insuranceCompany = await InsuranceCompany.findOne({ _id: req.params.id, user: userId });
+    
+    if (!insuranceCompany) throw new ApiError('Insurance company not found', 404);
 
-exports.deleteInsurance = asyncHandler(async (req, res) => {
-    const insuranceCompany = await InsuranceCompany.findByIdAndDelete(req.params.id);
-    if (!insuranceCompany) throw new ApiError('InsuranceCompany not found', 404);
+
+    
     return res.status(200).json({
         success: true,
-        message: 'InsuranceCompany deleted successfully',
-        // insuranceCompany
-    }); 
+        message: 'Insurance company retrieved successfully',
+        insuranceCompany
+    });
+});
+
+exports.updateInsuranceCompany = asyncHandler(async (req, res) => {
+    const insuranceCompany = await InsuranceCompany.findById(req.params.id);
+    if (!insuranceCompany) throw new ApiError('Insurance company not found', 404);
+
+
+    // Update insurance company fields from req.body
+    Object.keys(req.body).forEach(key => {
+        insuranceCompany[key] = req.body[key];
+    });
+
+    await insuranceCompany.save();
+
+    if (req.files && req.files.length > 0) {
+        const oldImages = insuranceCompany.images;
+
+        // Delete old images from disk
+        oldImages.forEach(image => {
+            const path = image.split('/').pop();
+            try {
+                fs.unlinkSync(`${uploadPath}/${path}`);
+            } catch (err) {
+                if (err.code !== 'ENOENT') {
+                    console.error(err);
+                }
+            }
+        });
+
+        // Set only new images
+        const newImages = req.files.map(image => image.location);
+        insuranceCompany.images = newImages;
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: 'Insurance company updated successfully',
+        insuranceCompany
+    });
 });
 
 
+exports.deleteInsuranceCompany = asyncHandler(async (req, res) => {
+    const insuranceCompany = await deleteDocumentWithFiles(InsuranceCompany, req.params.id, "uploads");
+    if (!insuranceCompany) throw new ApiError("Insurance company not found", 404);
+
+    return res.status(200).json({
+        success: true,
+        message: "Insurance company deleted successfully",
+        insuranceCompany,
+    });
+});
