@@ -1,34 +1,80 @@
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 const ExhaustFans = require('./ExhaustFans');
+const fs = require('fs');
+const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const deleteFile = require('../../../utils/unlinkFile');
+const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createExhaustFans = asyncHandler(async (req, res) => {
-    const exhaustFans = await ExhaustFans.create(req.body);
-    if (!exhaustFans) throw new ApiError('ExhaustFans not created', 500);
-    const images = req.files;
-    if (!images) throw new ApiError('No images uploaded', 400); 
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
     
+    const exhaustFans = await ExhaustFans.create({
+        rvId,
+        ...req.body,
+        user: userId,
+    });
+    
+    const images = req.files;
+    if (!exhaustFans) throw new ApiError('ExhaustFans not created', 500);
+
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         exhaustFans.images = imagePaths;
         await exhaustFans.save();
     }
 
-    return res.status(201).json({
+    res.status(201).json({
         success: true,
         message: 'ExhaustFans created successfully',
         exhaustFans
     });
-}); 
+});
 
 exports.getExhaustFans = asyncHandler(async (req, res) => {
-    const exhaustFans = await ExhaustFans.find();
-    if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
+    const s = { ...req.query, ...baseQuery };
+
+    const exhaustFansQuery = new QueryBuilder(
+        ExhaustFans.find(baseQuery),
+        req.query
+    )
+    
+    const exhaustFansList = await exhaustFansQuery
+        .search(['name', 'brand'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        ExhaustFans.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!exhaustFansList || exhaustFansList.length === 0) {
+        throw new ApiError('ExhaustFans not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
         message: 'ExhaustFans retrieved successfully',
-        exhaustFans
+        meta,
+        exhaustFans: exhaustFansList
     });
 });
 
@@ -46,12 +92,12 @@ exports.updateExhaustFans = asyncHandler(async (req, res) => {
     const exhaustFans = await ExhaustFans.findById(req.params.id);
     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
 
+    // Update exhaustFans fields from req.body
     Object.keys(req.body).forEach(key => {
         exhaustFans[key] = req.body[key];
     });
 
     await exhaustFans.save();
-
 
     if (req.files && req.files.length > 0) {
         const oldImages = exhaustFans.images;
@@ -69,28 +115,10 @@ exports.updateExhaustFans = asyncHandler(async (req, res) => {
         });
 
         // Set only new images
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        const newImages = req.files.map(image => image.location);
         exhaustFans.images = newImages;
+        await exhaustFans.save();
     }
-    // if (req.files && req.files.length > 0) {
-    //     const oldImages = exhaustFans.images;
-    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
-    //     exhaustFans.images = [...oldImages, ...newImages];
-    //     await exhaustFans.save();
-
-    //     oldImages.forEach(image => {
-    //         const path = image.split('/').pop();
-    //         try {
-    //             deleteFile(`${uploadPath}/${path}`);
-    //         } catch (err) {
-    //             if (err.code !== 'ENOENT') {
-    //                 console.error(err);
-    //             }
-    //         }
-    //     });
-    // } else {
-    //     await exhaustFans.updateOne(req.body);
-    // }
 
     return res.status(200).json({
         success: true,
@@ -99,35 +127,13 @@ exports.updateExhaustFans = asyncHandler(async (req, res) => {
     });
 });
 
-
-// exports.deleteExhaustFans = asyncHandler(async (req, res) => {
-//     const exhaustFans = await ExhaustFans.findByIdAndDelete(req.params.id);
-//     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
-//     return res.status(200).json({
-//         success: true,
-//         message: 'ExhaustFans deleted successfully',
-//         exhaustFans
-//     });
-// });
-
-// exports.deleteAllExhaustFans = asyncHandler(async (req, res) => {
-//     const exhaustFans = await ExhaustFans.deleteMany();
-//     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
-//     return res.status(200).json({
-//         success: true,
-//         message: 'ExhaustFans deleted successfully',
-//         exhaustFans
-//     });
-// });
-
-
-exports.deleteAllExhaustFan = asyncHandler(async (req, res) => {
+exports.deleteExhaustFans = asyncHandler(async (req, res) => {
     const exhaustFans = await deleteDocumentWithFiles(ExhaustFans, req.params.id, "uploads");
-    if (!exhaustFans) throw new ApiError("exhaustFans not found", 404);
+    if (!exhaustFans) throw new ApiError("ExhaustFans not found", 404);
 
     return res.status(200).json({
         success: true,
-        message: "exhaustFans deleted successfully (with images)",
+        message: "ExhaustFans deleted successfully (with images)",
         exhaustFans,
     });
 });
