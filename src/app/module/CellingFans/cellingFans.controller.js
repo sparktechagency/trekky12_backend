@@ -2,6 +2,8 @@ const CellingFans = require('./CellingFans');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
 
+
+
 exports.createCellingFans = asyncHandler(async (req, res) => {
     const cellingFans = await CellingFans.create(req.body);
     if (!cellingFans) throw new ApiError('CellingFans not created', 500);
