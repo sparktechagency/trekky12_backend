@@ -11,7 +11,7 @@ const { authenticateUser } = require('../../middleware/auth.middleware');
 
 
 router.get('/profile', authenticateUser, getUserProfile);
-router.patch('/edit-profile', authenticateUser, upload.single('profilePic'), updateUserProfile);
+router.put('/update-profile', authenticateUser, upload.single('profilePic'), updateUserProfile);
 router.put('/change-password', authenticateUser, changePassword);
 router.delete('/delete-account', authenticateUser, deleteAccount);
 router.put('/select-rv', authenticateUser, selectRV);

@@ -87,7 +87,7 @@ const s3 = require("../config/s3"); // 👈 your AWS S3 client
 const { ApiError } = require("../errors/errorHandler");
 
 // Allowed file types
-const allowedImageTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+const allowedImageTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp", "image/gif", "image/svg+xml", "image/bmp", "image/tiff"];
 const allowedVideoTypes = ["video/mp4", "video/quicktime", "video/x-matroska", "video/webm"];
 const allowedPdfTypes = ["application/pdf"];
 
@@ -96,7 +96,7 @@ const fileFilter = (req, file, cb) => {
   if (allowedImageTypes.includes(file.mimetype) || allowedVideoTypes.includes(file.mimetype) || allowedPdfTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new ApiError("Only images (jpg, png, webp), videos (mp4, mov, mkv, webm) and PDFs are allowed", 400), false);
+    cb(new ApiError("Only images (jpg, png, webp, gif, svg, bmp, tiff), videos (mp4, mov, mkv, webm) and PDFs are allowed", 400), false);
   }
 };
 

@@ -18,20 +18,20 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
 
 exports.updateUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) throw new ApiError('User not found', 404);
-    user.name = req.body.name || user.name;
-    user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
+    const { name, phone } = req.body;
+    const update = { name, phone };
     if (req.file) {
-        user.profilePic = req.file.path;
+        update.profilePic = req.file.location;
     }
-    await user.save();
+    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select('-password');
+    if (!user) throw new ApiError('User not found', 404);
     return res.status(200).json({
         success: true,
-        message: 'Profile updated successfully',
-        user
+        message: 'User profile updated successfully',
+        user,
     });
 });
+
 
 
 exports.changePassword = asyncHandler(async (req, res) => { // start of change password function

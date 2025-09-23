@@ -27,7 +27,17 @@ const dishwasherSchema = new mongoose.Schema({
     images: {
         type: [String], // image URLs or file paths
         default: [],
-    }
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
+    rvId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RV',
+        required: true,
+    },
 }, { timestamps: true });
 
 const Dishwasher = mongoose.model('Dishwasher', dishwasherSchema);
