@@ -1,35 +1,79 @@
 const CellingFans = require('./CellingFans');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
-
-
+const fs = require('fs');
+const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const deleteFile = require('../../../utils/unlinkFile');
+const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createCellingFans = asyncHandler(async (req, res) => {
-    const cellingFans = await CellingFans.create(req.body);
-    if (!cellingFans) throw new ApiError('CellingFans not created', 500);
-    const images = req.files;
-    if (!images) throw new ApiError('No images uploaded', 400); 
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
     
+    const cellingFans = await CellingFans.create({
+        rvId,
+        ...req.body,
+        user: userId,
+    });
+    
+    const images = req.files;
+    if (!cellingFans) throw new ApiError('CellingFans not created', 500);
+
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         cellingFans.images = imagePaths;
         await cellingFans.save();
     }
 
-    return res.status(201).json({
+    res.status(201).json({
         success: true,
         message: 'CellingFans created successfully',
         cellingFans
     });
 });
 
-
 exports.getCellingFans = asyncHandler(async (req, res) => {
-    const cellingFans = await CellingFans.find();
-    if (!cellingFans) throw new ApiError('CellingFans not found', 404);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
+    const s = { ...req.query, ...baseQuery };
+
+    const cellingFansQuery = new QueryBuilder(
+        CellingFans.find(baseQuery),
+        req.query
+    )
+    
+    const cellingFans = await cellingFansQuery
+        .search(['name', 'brand'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        CellingFans.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!cellingFans || cellingFans.length === 0) {
+        throw new ApiError('CellingFans not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
         message: 'CellingFans retrieved successfully',
+        meta,
         cellingFans
     });
 });
@@ -44,29 +88,36 @@ exports.getCellingFansById = asyncHandler(async (req, res) => {
     });
 });
 
-
 exports.updateCellingFans = asyncHandler(async (req, res) => {
     const cellingFans = await CellingFans.findById(req.params.id);
     if (!cellingFans) throw new ApiError('CellingFans not found', 404);
 
+    // Update cellingFans fields from req.body
+    Object.keys(req.body).forEach(key => {
+        cellingFans[key] = req.body[key];
+    });
+
+    await cellingFans.save();
+
     if (req.files && req.files.length > 0) {
         const oldImages = cellingFans.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        cellingFans.images = [...oldImages, ...newImages];
-        await cellingFans.save();
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
-                deleteFile(`${uploadPath}/${path}`);
+                fs.unlinkSync(`${uploadPath}/${path}`);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(err);
                 }
             }
         });
-    } else {
-        await cellingFans.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.location);
+        cellingFans.images = newImages;
+        await cellingFans.save();
     }
 
     return res.status(200).json({
@@ -76,15 +127,13 @@ exports.updateCellingFans = asyncHandler(async (req, res) => {
     });
 });
 
-
 exports.deleteCellingFans = asyncHandler(async (req, res) => {
-    const cellingFans = await CellingFans.findByIdAndDelete(req.params.id);
-    if (!cellingFans) throw new ApiError('CellingFans not found', 404);
+    const cellingFans = await deleteDocumentWithFiles(CellingFans, req.params.id, "uploads");
+    if (!cellingFans) throw new ApiError("CellingFans not found", 404);
+
     return res.status(200).json({
         success: true,
-        message: 'CellingFans deleted successfully',
-        cellingFans
+        message: "CellingFans deleted successfully (with images)",
+        cellingFans,
     });
 });
-
-
