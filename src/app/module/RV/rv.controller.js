@@ -9,8 +9,11 @@ exports.addRv = asyncHandler(async (req, res) => {
     
     if (user) {
         user.rvIds.push(rv._id);
+        user.selectedRvId = rv._id;
         await user.save();
     }
+
+    
 
     res.status(201).json({
         success: true,

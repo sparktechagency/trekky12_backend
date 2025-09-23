@@ -4,6 +4,7 @@ const { ApiError } = require('../../../errors/errorHandler');
 const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
+const User = require('../../module/User/User');
 
 exports.createDishwasher = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -43,11 +44,17 @@ exports.createDishwasher = asyncHandler(async (req, res) => {
 
 exports.getDishwashers = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
+    // console.log(userId)
+    const user = await User.findById(userId);
+    console.log(user)
     const selectedRvId = await getSelectedRvByUserId(userId);
+    console.log(selectedRvId)
     let rvId = req.query.rvId;
-    
+    console.log(rvId)
     if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
     if(!rvId) rvId = selectedRvId;
+
+    // console.log(rvId)
     
     const baseQuery = { user: userId, rvId };
     
