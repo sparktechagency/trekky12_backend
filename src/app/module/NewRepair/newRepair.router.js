@@ -9,7 +9,7 @@ router.post('/create',authenticateUser, upload.array('images'), createNewRepair)
 router.get('/get', authenticateUser, getNewRepair);
 router.get('/get/:id', authenticateUser, getNewRepairById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateNewRepair);
-router.delete('/delete/:id', authenticateUser, deleteNewRepair);
+router.post('/delete/:id', authenticateUser, deleteNewRepair);
 
 module.exports = router;
 

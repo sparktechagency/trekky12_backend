@@ -9,6 +9,6 @@ router.post('/create', authenticateUser, upload.array('images'), createGps);
 router.get('/get', authenticateUser, getGps);
 router.get('/get/:id', authenticateUser, getGpsById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateGps);
-router.delete('/delete/:id', authenticateUser, deleteGps);
+router.post('/delete/:id', authenticateUser, deleteGps);
 
 module.exports = router;

@@ -8,6 +8,6 @@ router.post('/create',authenticateUser, upload.array('images'), createToilet);
 router.get('/get', authenticateUser, getToilets);
 router.get('/get/:id', authenticateUser, getToiletById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateToilet);
-router.delete('/delete/:id', authenticateUser, deleteToilet);
+router.post('/delete/:id', authenticateUser, deleteToilet);
 
 module.exports = router;

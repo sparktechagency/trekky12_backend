@@ -8,6 +8,6 @@ router.post('/create',authenticateUser, upload.array('images'), createCellingFan
 router.get('/get', authenticateUser, getCellingFans);
 router.get('/get/:id', authenticateUser, getCellingFansById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateCellingFans);
-router.delete('/delete/:id', authenticateUser, deleteCellingFans);
+router.post('/delete/:id', authenticateUser, deleteCellingFans);
 
 module.exports = router;

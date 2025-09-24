@@ -9,6 +9,6 @@ router.post('/create', authenticateUser, upload.array('images'), createWifiRoute
 router.get('/get', authenticateUser, getWifiRouters);
 router.get('/get/:id', authenticateUser, getWifiRouterById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateWifiRouter);
-router.delete('/delete/:id', authenticateUser, deleteWifiRouter);
+router.post('/delete/:id', authenticateUser, deleteWifiRouter);
 
 module.exports = router;

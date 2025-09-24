@@ -8,6 +8,6 @@ router.post('/create',authenticateUser, upload.array('images'), createDryer);
 router.get('/get', authenticateUser, getDryers);
 router.get('/get/:id', authenticateUser, getDryerById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateDryer);
-router.delete('/delete/:id', authenticateUser, deleteDryer);
+router.post('/delete/:id', authenticateUser, deleteDryer);
 
 module.exports = router;

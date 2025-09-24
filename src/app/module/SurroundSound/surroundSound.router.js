@@ -9,7 +9,7 @@ router.post('/create', authenticateUser, upload.array('images'), createSurroundS
 router.get('/get', authenticateUser, getSurroundSounds);
 router.get('/get/:id', authenticateUser, getSurroundSoundById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateSurroundSound);
-router.delete('/delete/:id', authenticateUser, deleteSurroundSound);
+router.post('/delete/:id', authenticateUser, deleteSurroundSound);
 
 module.exports = router;
 

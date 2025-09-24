@@ -9,6 +9,6 @@ router.post('/create', authenticateUser, upload.array('images'), createWasher);
 router.get('/get', authenticateUser, getWasher);
 router.get('/get/:id', authenticateUser, getWasherById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateWasher);
-router.delete('/delete/:id', authenticateUser, deleteWasher);
+router.post('/delete/:id', authenticateUser, deleteWasher);
 
 module.exports = router;

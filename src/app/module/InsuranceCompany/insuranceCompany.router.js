@@ -9,6 +9,6 @@ router.post('/create',authenticateUser, upload.array('images'), createInsuranceC
 router.get('/get', authenticateUser, getInsuranceCompanies);
 router.get('/get/:id', authenticateUser, getInsuranceCompanyById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateInsuranceCompany);
-router.delete('/delete/:id', authenticateUser, deleteInsuranceCompany);
+router.post('/delete/:id', authenticateUser, deleteInsuranceCompany);
 
 module.exports = router;

@@ -10,7 +10,7 @@ router.post('/create', authenticateUser, createChecklist);
 router.get('/get', authenticateUser, getAllChecklist);
 router.get('/get/:id', authenticateUser, getChecklistById);
 router.put('/update/:id', authenticateUser,updateChecklist);
-router.delete('/delete/:id', authenticateUser, deleteChecklist);
+router.post('/delete/:id', authenticateUser, deleteChecklist);
 
 module.exports = router;
 

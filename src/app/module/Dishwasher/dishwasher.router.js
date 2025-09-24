@@ -8,7 +8,7 @@ router.post('/create',authenticateUser, upload.array('images'), createDishwasher
 router.get('/get', authenticateUser, getDishwashers);
 router.get('/get/:id', authenticateUser, getDishwasherById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateDishwasher);
-router.delete('/delete/:id', authenticateUser, deleteDishwasher);
+router.post('/delete/:id', authenticateUser, deleteDishwasher);
 
 module.exports = router;
 

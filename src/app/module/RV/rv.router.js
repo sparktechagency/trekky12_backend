@@ -16,7 +16,7 @@ router.post("/add-rv", authenticateUser, addRv);
 router.get("/get-rvs", authenticateUser, getUserRvs);
 router.get("/get-rv/:id", authenticateUser, getRv);
 router.put("/update-rv/:id", authenticateUser, updateRv);
-router.delete("/delete-rv/:id", authenticateUser, deleteRv);
+router.post("/delete-rv/:id", authenticateUser, deleteRv);
 router.put("/update-mileage/:id", authenticateUser, updateCurrentMileage);
 
 

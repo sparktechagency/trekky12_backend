@@ -10,7 +10,7 @@ router.post('/create', authenticateUser, upload.array('images'), createWaterPump
 router.get('/get', authenticateUser, getWaterPump);
 router.get('/get/:id', authenticateUser, getWaterPumpById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateWaterPump);
-router.delete('/delete/:id', authenticateUser, deleteWaterPump);
+router.post('/delete/:id', authenticateUser, deleteWaterPump);
 
 module.exports = router;
 

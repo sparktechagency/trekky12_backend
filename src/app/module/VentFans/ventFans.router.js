@@ -7,7 +7,7 @@ const { authenticateUser } = require('../../middleware/auth.middleware');
 router.post('/create',authenticateUser, upload.array('images'), createVentFans);
 router.get('/get', authenticateUser, getVentFans);
 router.get('/get/:id', authenticateUser, getVentFanById);
-router.delete('/delete/:id', authenticateUser, deleteVentFan);
+router.post('/delete/:id', authenticateUser, deleteVentFan);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateVentFan);
 
 module.exports = router;

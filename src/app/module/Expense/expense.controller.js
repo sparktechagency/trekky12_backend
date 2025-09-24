@@ -1,40 +1,35 @@
 const Expense = require('./Expense');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
-const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const QueryBuilder = require('../../../builder/queryBuilder');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 
 // @desc    Create a new expense
-// @route   POST /api/v1/expense
+// @route   POST /api/v1/expense/create
 // @access  Private
 exports.createExpense = asyncHandler(async (req, res) => {
-    const { userId } = req.user;
-    const selectedRv = await getSelectedRvByUserId(userId);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
     
-    if (!selectedRv) {
-        throw new ApiError('Please select an RV first', 400);
-    }
-
-    // Process images from S3
-    const images = [];
-    if (req.files && req.files.length > 0) {
-        req.files.forEach(file => {
-            if (file.location) {
-                images.push(file.location);
-            }
-        });
-    }
-
-    const expenseData = {
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const expense = await Expense.create({
+        rvId,
         ...req.body,
         user: userId,
-        rvId: selectedRv._id,
-        images
-    };
+    });
+    
+    const images = req.files;
+    if (!expense) throw new ApiError('Expense not created', 500);
 
-    const expense = await Expense.create(expenseData);
-    if (!expense) throw new ApiError('Failed to create expense', 500);
+    if (images && images.length > 0) {
+        const imagePaths = images.map(image => image.location);
+        expense.images = imagePaths;
+        await expense.save();
+    }
 
     res.status(201).json({
         success: true,
@@ -44,53 +39,61 @@ exports.createExpense = asyncHandler(async (req, res) => {
 });
 
 // @desc    Get all expenses with filtering, sorting, and pagination
-// @route   GET /api/v1/expense
+// @route   GET /api/v1/expense/get
 // @access  Private
 exports.getExpenses = asyncHandler(async (req, res) => {
-    const { userId } = req.user;
-    const selectedRv = await getSelectedRvByUserId(userId);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
     
-    if (!selectedRv) {
-        throw new ApiError('Please select an RV first', 400);
-    }
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
 
-    // Use QueryBuilder for advanced querying
-    const features = new QueryBuilder(Expense.find({ rvId: selectedRv._id }), req.query)
+    const expenseQuery = new QueryBuilder(
+        Expense.find(baseQuery),
+        req.query
+    );
+    
+    const expenses = await expenseQuery
+        .search(['expenseType', 'vendor', 'notes']) // Add searchable fields
         .filter()
         .sort()
-        .limitFields()
-        .paginate();
+        .paginate()
+        .fields()
+        .modelQuery;
 
-    const expenses = await features.query;
-    const meta = features.getMeta();
+    const meta = await new QueryBuilder(
+        Expense.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!expenses || expenses.length === 0) {
+        throw new ApiError('No expenses found', 404);
+    }
 
     res.status(200).json({
         success: true,
         message: 'Expenses retrieved successfully',
-        data: expenses,
-        meta
+        meta,
+        data: expenses
     });
 });
 
 // @desc    Get single expense by ID
-// @route   GET /api/v1/expense/:id
+// @route   GET /api/v1/expense/get/:id
 // @access  Private
 exports.getExpenseById = asyncHandler(async (req, res) => {
-    const { userId } = req.user;
-    const selectedRv = await getSelectedRvByUserId(userId);
+    const userId = req.user.id || req.user._id;
     
-    if (!selectedRv) {
-        throw new ApiError('Please select an RV first', 400);
-    }
-
     const expense = await Expense.findOne({
         _id: req.params.id,
-        rvId: selectedRv._id,
         user: userId
     });
 
     if (!expense) {
-        throw new ApiError('Expense not found', 404);
+        throw new ApiError('Expense not found or access denied', 404);
     }
 
     res.status(200).json({
@@ -101,46 +104,32 @@ exports.getExpenseById = asyncHandler(async (req, res) => {
 });
 
 // @desc    Update an expense
-// @route   PUT /api/v1/expense/:id
+// @route   PUT /api/v1/expense/update/:id
 // @access  Private
 exports.updateExpense = asyncHandler(async (req, res) => {
-    const { userId } = req.user;
-    const selectedRv = await getSelectedRvByUserId(userId);
+    const userId = req.user.id || req.user._id;
     
-    if (!selectedRv) {
-        throw new ApiError('Please select an RV first', 400);
-    }
-
-    let expense = await Expense.findOne({
+    const expense = await Expense.findOne({
         _id: req.params.id,
-        rvId: selectedRv._id,
         user: userId
     });
-
+    
     if (!expense) {
-        throw new ApiError('Expense not found', 404);
+        throw new ApiError('Expense not found or access denied', 404);
     }
 
-    // Process new images from S3
-    if (req.files && req.files.length > 0) {
-        // Add new images
-        const newImages = req.files
-            .filter(file => file.location)
-            .map(file => file.location);
-        
-        // Combine with existing images if needed, or replace them
-        const updatedImages = [...expense.images, ...newImages];
-        
-        // Update the expense with new images
-        expense.images = updatedImages;
-    }
-
-    // Update other fields
+    // Update expense fields from req.body
     Object.keys(req.body).forEach(key => {
         if (key !== 'images') { // Don't override images from req.body
             expense[key] = req.body[key];
         }
     });
+
+    // Handle image updates if new files are uploaded
+    if (req.files && req.files.length > 0) {
+        const newImages = req.files.map(file => file.location);
+        expense.images = [...expense.images, ...newImages];
+    }
 
     await expense.save();
 
@@ -152,32 +141,15 @@ exports.updateExpense = asyncHandler(async (req, res) => {
 });
 
 // @desc    Delete an expense
-// @route   DELETE /api/v1/expense/:id
+// @route   DELETE /api/v1/expense/delete/:id
 // @access  Private
 exports.deleteExpense = asyncHandler(async (req, res) => {
-    const { userId } = req.user;
-    const selectedRv = await getSelectedRvByUserId(userId);
-    
-    if (!selectedRv) {
-        throw new ApiError('Please select an RV first', 400);
-    }
+    const expense = await deleteDocumentWithFiles(Expense, req.params.id, "uploads");
+    if (!expense) throw new ApiError("Expense not found", 404);
 
-    const expense = await Expense.findOne({
-        _id: req.params.id,
-        rvId: selectedRv._id,
-        user: userId
-    });
-
-    if (!expense) {
-        throw new ApiError('Expense not found', 404);
-    }
-
-    // Use the utility function to delete the document and its associated files
-    await deleteDocumentWithFiles(Expense, req.params.id);
-
-    res.status(200).json({
+    return res.status(200).json({
         success: true,
-        message: 'Expense deleted successfully',
-        data: {}
+        message: "Expense deleted successfully (with images)",
+        expense,
     });
 });

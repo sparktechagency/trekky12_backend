@@ -8,7 +8,7 @@ router.post('/create', authenticateUser, upload.array('images'), createMembershi
 router.get('/get', authenticateUser, getMemberships);
 router.get('/get/:id', authenticateUser, getMembershipById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateMembership);
-router.delete('/delete/:id', authenticateUser, deleteMembership);
+router.post('/delete/:id', authenticateUser, deleteMembership);
 
 module.exports = router;
 

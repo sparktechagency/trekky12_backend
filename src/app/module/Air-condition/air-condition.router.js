@@ -10,7 +10,7 @@ router.post('/create',  authenticateUser, upload.array('images'), createAirCondi
 router.get('/get', authenticateUser, getAirConditions);
 router.get('/get/:id', authenticateUser, getAirConditionById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateAirCondition);
-router.delete('/delete/:id', authenticateUser, deleteAirCondition);
+router.post('/delete/:id', authenticateUser, deleteAirCondition);
 
 module.exports = router;
 

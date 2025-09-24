@@ -8,7 +8,7 @@ router.post('/create',authenticateUser, upload.array('images'), createTv);
 router.get('/get', authenticateUser, getTvs);
 router.get('/get/:id', authenticateUser, getTvById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateTv);
-router.delete('/delete/:id', authenticateUser, deleteTv);
+router.post('/delete/:id', authenticateUser, deleteTv);
 
 module.exports = router;
 

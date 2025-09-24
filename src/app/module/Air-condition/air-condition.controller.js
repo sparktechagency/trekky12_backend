@@ -5,6 +5,7 @@ const User = require('../User/User')
 const getSelectedRvByUserId = require('../../../utils/currentRv')
 const QueryBuilder = require('../../../builder/queryBuilder')
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const checkValidRv = require('../../../utils/checkValidRv');
 
 exports.createAirCondition = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -12,6 +13,12 @@ exports.createAirCondition = asyncHandler(async (req, res) => {
     let rvId = req.body.rvId;
     if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
     if(!rvId) rvId = selectedRvId;
+
+    const hasAccess = await checkValidRv(userId, rvId);
+    if (!hasAccess) {
+        throw new ApiError('You do not have permission to add maintenance for this RV', 403);
+    }
+
     const airCondition = await AirCondition.create({ ...req.body, user: userId, rvId });
     const images = req.files;
     if (!airCondition) throw new ApiError('AirCondition not created', 500);

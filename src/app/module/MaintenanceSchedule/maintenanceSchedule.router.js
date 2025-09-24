@@ -9,6 +9,6 @@ router.post('/create', authenticateUser, createMaintenanceSchedule);
 router.get('/get', authenticateUser, getMaintenanceSchedule);
 router.get('/get/:id', authenticateUser, getMaintenanceScheduleById);
 router.put('/update/:id', authenticateUser, updateMaintenanceSchedule);
-router.delete('/delete/:id', authenticateUser, deleteMaintenanceSchedule);    
+router.post('/delete/:id', authenticateUser, deleteMaintenanceSchedule);    
 
 module.exports = router;

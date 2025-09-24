@@ -9,6 +9,6 @@ router.post('/create', authenticateUser, upload.array('images'), createExhaustFa
 router.get('/get', authenticateUser, getExhaustFans);
 router.get('/get/:id', authenticateUser, getExhaustFansById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateExhaustFans);
-router.delete('/delete/:id', authenticateUser, deleteExhaustFans);
+router.post('/delete/:id', authenticateUser, deleteExhaustFans);
 
 module.exports = router;

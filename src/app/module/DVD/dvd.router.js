@@ -8,6 +8,6 @@ router.post('/create',authenticateUser, upload.array('images'), createDvd);
 router.get('/get', authenticateUser, getDvd);
 router.get('/get/:id', authenticateUser, getDvdById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateDvd);
-router.delete('/delete/:id', authenticateUser, deleteDvd);
+router.post('/delete/:id', authenticateUser, deleteDvd);
 
 module.exports = router;

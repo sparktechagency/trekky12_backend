@@ -9,6 +9,6 @@ router.post('/create', authenticateUser, upload.array('images'), createOutdoorRa
 router.get('/get', authenticateUser, getOutdoorRadio);
 router.get('/get/:id', authenticateUser, getOutdoorRadioById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateOutdoorRadio);
-router.delete('/delete/:id', authenticateUser, deleteOutdoorRadio);
+router.post('/delete/:id', authenticateUser, deleteOutdoorRadio);
 
 module.exports = router;

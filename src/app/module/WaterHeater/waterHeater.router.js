@@ -9,6 +9,6 @@ router.post('/create', authenticateUser, upload.array('images'), createWaterHeat
 router.get('/get', authenticateUser, getWaterHeater);
 router.get('/get/:id', authenticateUser, getWaterHeaterById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateWaterHeater);
-router.delete('/delete/:id', authenticateUser, deleteWaterHeater);
+router.post('/delete/:id', authenticateUser, deleteWaterHeater);
 
 module.exports = router;

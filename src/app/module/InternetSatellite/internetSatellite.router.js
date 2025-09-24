@@ -8,6 +8,6 @@ router.post('/create', authenticateUser, upload.array('images'), createInternetS
 router.get('/get', authenticateUser, getInternetSatellites);
 router.get('/get/:id', authenticateUser, getInternetSatelliteById);
 router.put('/update/:id', authenticateUser, upload.array('images'), updateInternetSatellite);
-router.delete('/delete/:id', authenticateUser, deleteInternetSatellite);
+router.post('/delete/:id', authenticateUser, deleteInternetSatellite);
 
 module.exports = router;
