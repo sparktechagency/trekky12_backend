@@ -4,7 +4,7 @@ const asyncHandler = require('../../../utils/asyncHandler');
 const tokenService = require('../../../utils/tokenService');
 const emailService = require('../../../utils/emailService');
 const bcrypt = require('bcrypt');
-
+const RV = require('../RV/RV');
 
 exports.getUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.id)
@@ -25,21 +25,26 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
 exports.updateUserProfile = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
-    const { name, phone } = req.body;
-    const update = { name, phone };
+    const { name, phone, currentMileage } = req.body;
+    const update = { name, phone, currentMileage };
     if (req.file) {
         update.profilePic = req.file.location;
     }
-    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select('-password')
+    const user = await User.findById(userId);
+    if (!user) throw new ApiError('User not found', 404);
+    const selectedRv = user.selectedRvId;
+    if (selectedRv) {
+        const rv = await RV.findByIdAndUpdate(selectedRv, { currentMileage }, { new: true });
+        if (!rv) throw new ApiError('RV not found', 404);
+    }
+    const updatedUser = await User.findByIdAndUpdate(userId, update, { new: true }).select('-password')
         .populate('rvIds', 'nickname currentMileage')
         .populate('selectedRvId', 'nickname currentMileage')
-    if (!user) throw new ApiError('User not found', 404);
-
-
+    
     return res.status(200).json({
         success: true,
         message: 'User profile updated successfully',
-        user,
+        user: updatedUser,
     });
 });
 

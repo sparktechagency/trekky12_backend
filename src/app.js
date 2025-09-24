@@ -80,6 +80,8 @@ app.use('/api/new-repair', require('./app/module/NewRepair/newRepair.router'));
 app.use('/api/reports', require('./app/module/Reports/reports.router'));
 app.use('/api/expense', require('./app/module/Expense/expense.router'));
 app.use('/api/maintenance-schedule', require('./app/module/MaintenanceSchedule/maintenanceSchedule.router'));
+app.use('/api/dashboard', require('./app/module/Dashboard/dashboard.router'));
+app.use('/api/manage', require('./app/module/Manage/manage.router'));
 
 
 app.get('/', (req, res) => {
