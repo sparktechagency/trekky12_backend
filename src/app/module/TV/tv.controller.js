@@ -1,59 +1,103 @@
 const Tv = require('./Tv');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
+const fs = require('fs');
+const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const deleteFile = require('../../../utils/unlinkFile');
+const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createTv = asyncHandler(async (req, res) => {
-    const tv = await Tv.create(req.body);
-    if (!tv) throw new ApiError('Tv not created', 500);
-    const images = req.files;
-    if (!images) throw new ApiError('No images uploaded', 400); 
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
     
+    const tv = await Tv.create({
+        rvId,
+        ...req.body,
+        user: userId,
+    });
+    
+    const images = req.files;
+    if (!tv) throw new ApiError('TV not created', 500);
+
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         tv.images = imagePaths;
         await tv.save();
     }
 
-    return res.status(201).json({
+    res.status(201).json({
         success: true,
-        message: 'Tv created successfully',
+        message: 'TV created successfully',
         tv
     });
 });
 
 exports.getTvs = asyncHandler(async (req, res) => {
-    const tvs = await Tv.find();
-    if (!tvs) throw new ApiError('Tvs not found', 404);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
+    const s = { ...req.query, ...baseQuery };
+
+    const tvsQuery = new QueryBuilder(
+        Tv.find(baseQuery),
+        req.query
+    )
+    
+    const tvs = await tvsQuery
+        .search(['name', 'brand', 'modelNumber'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        Tv.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!tvs || tvs.length === 0) {
+        throw new ApiError('TVs not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
-        message: 'Tvs retrieved successfully',
+        message: 'TVs retrieved successfully',
+        meta,
         tvs
     });
 });
 
-
 exports.getTvById = asyncHandler(async (req, res) => {
     const tv = await Tv.findById(req.params.id);
-    if (!tv) throw new ApiError('Tv not found', 404);
+    if (!tv) throw new ApiError('TV not found', 404);
     return res.status(200).json({
         success: true,
-        message: 'Tv retrieved successfully',
+        message: 'TV retrieved successfully',
         tv
     });
 });
 
 exports.updateTv = asyncHandler(async (req, res) => {
     const tv = await Tv.findById(req.params.id);
-    if (!tv) throw new ApiError('Tv not found', 404);
+    if (!tv) throw new ApiError('TV not found', 404);
 
-
+    // Update TV fields from req.body
     Object.keys(req.body).forEach(key => {
         tv[key] = req.body[key];
     });
 
     await tv.save();
-
 
     if (req.files && req.files.length > 0) {
         const oldImages = tv.images;
@@ -71,54 +115,25 @@ exports.updateTv = asyncHandler(async (req, res) => {
         });
 
         // Set only new images
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
+        const newImages = req.files.map(image => image.location);
         tv.images = newImages;
+        await tv.save();
     }
-    // if (req.files && req.files.length > 0) {
-    //     const oldImages = tv.images;
-    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
-    //     tv.images = [...oldImages, ...newImages];
-    //     await tv.save();
-
-    //     oldImages.forEach(image => {
-    //         const path = image.split('/').pop();
-    //         try {
-    //             deleteFile(`${uploadPath}/${path}`);
-    //         } catch (err) {
-    //             if (err.code !== 'ENOENT') {
-    //                 console.error(err);
-    //             }
-    //         }
-    //     });
-    // } else {
-    //     await tv.updateOne(req.body);
-    // }
 
     return res.status(200).json({
         success: true,
-        message: 'Tv updated successfully',
+        message: 'TV updated successfully',
         tv
     });
 });
 
-// exports.deleteTv = asyncHandler(async (req, res) => {
-//     const tv = await Tv.findByIdAndDelete(req.params.id);
-//     if (!tv) throw new ApiError('Tv not found', 404);
-//     return res.status(200).json({
-//         success: true,
-//         message: 'Tv deleted successfully',
-//         tv
-//     });
-// });
-
-
 exports.deleteTv = asyncHandler(async (req, res) => {
     const tv = await deleteDocumentWithFiles(Tv, req.params.id, "uploads");
-    if (!tv) throw new ApiError("tv not found", 404);
+    if (!tv) throw new ApiError("TV not found", 404);
 
     return res.status(200).json({
         success: true,
-        message: "tv deleted successfully (with images)",
+        message: "TV deleted successfully (with images)",
         tv,
     });
 });

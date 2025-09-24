@@ -38,7 +38,7 @@ const exhaustFansSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     }
-}, { timestamps: true });   
+}, { timestamps: true });
 
 const ExhaustFans = mongoose.model('ExhaustFans', exhaustFansSchema);
 
