@@ -7,7 +7,19 @@ const maintenanceSchedule = new mongoose.Schema({
     maintenanceToBePerformed: {
         type: Date
     },
+    rvType: {
+        type: String
+    },
     initialMilage: {
+        type: Number
+    },
+    initial: {
+        type: String
+    },
+    dateOfMaintenance: {
+        type: Date
+    },
+    milageAtMaintenance: {
         type: Number
     },
     notes: {

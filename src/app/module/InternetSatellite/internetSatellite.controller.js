@@ -1,78 +1,138 @@
 const InternetSatellite = require('./InternetSatellite');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
+const fs = require('fs');
+const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const deleteFile = require('../../../utils/unlinkFile');
+const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createInternetSatellite = asyncHandler(async (req, res) => {
-    const internetSatellite = await InternetSatellite.create(req.body);
-    if (!internetSatellite) throw new ApiError('InternetSatellite not created', 500);
-    const images = req.files.map(file => file.path);
-    internetSatellite.images = images;
-    await internetSatellite.save();
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
     
+    const internetSatellite = await InternetSatellite.create({
+        rvId,
+        ...req.body,
+        user: userId,
+    });
+    
+    const images = req.files;
+    if (!internetSatellite) throw new ApiError('Internet satellite device not created', 500);
+
+    if (images && images.length > 0) {
+        const imagePaths = images.map(image => image.location);
+        internetSatellite.images = imagePaths;
+        await internetSatellite.save();
+    }
+
     res.status(201).json({
         success: true,
-        message: 'InternetSatellite created successfully',
+        message: 'Internet satellite device created successfully',
         internetSatellite
     });
 });
 
-exports.getInternetSatellite = asyncHandler(async (req, res) => {
-    const internetSatellite = await InternetSatellite.find();
-    if (!internetSatellite) throw new ApiError('InternetSatellite not found', 404);
+exports.getInternetSatellites = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
+
+    const internetSatellitesQuery = new QueryBuilder(
+        InternetSatellite.find(baseQuery),
+        req.query
+    )
+    
+    const internetSatellites = await internetSatellitesQuery
+        .search(['name', 'brand', 'modelNumber'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        InternetSatellite.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!internetSatellites || internetSatellites.length === 0) {
+        throw new ApiError('Internet satellite devices not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
-        message: 'InternetSatellite retrieved successfully',
-        internetSatellite
+        message: 'Internet satellite devices retrieved successfully',
+        meta,
+        internetSatellites
     });
 });
 
 exports.getInternetSatelliteById = asyncHandler(async (req, res) => {
     const internetSatellite = await InternetSatellite.findById(req.params.id);
-    if (!internetSatellite) throw new ApiError('InternetSatellite not found', 404);
+    if (!internetSatellite) throw new ApiError('Internet satellite device not found', 404);
     return res.status(200).json({
         success: true,
-        message: 'InternetSatellite retrieved successfully',
+        message: 'Internet satellite device retrieved successfully',
         internetSatellite
     });
 });
 
 exports.updateInternetSatellite = asyncHandler(async (req, res) => {
     const internetSatellite = await InternetSatellite.findById(req.params.id);
-    if (!internetSatellite) throw new ApiError('InternetSatellite not found', 404);
+    if (!internetSatellite) throw new ApiError('Internet satellite device not found', 404);
+
+    // Update internet satellite device fields from req.body
+    Object.keys(req.body).forEach(key => {
+        internetSatellite[key] = req.body[key];
+    });
+
+    await internetSatellite.save();
 
     if (req.files && req.files.length > 0) {
         const oldImages = internetSatellite.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        internetSatellite.images = [...oldImages, ...newImages];
-        await internetSatellite.save();
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
-                deleteFile(`${uploadPath}/${path}`);
+                fs.unlinkSync(`${uploadPath}/${path}`);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(err);
                 }
             }
         });
-    } else {
-        await internetSatellite.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.location);
+        internetSatellite.images = newImages;
+        await internetSatellite.save();
     }
 
     return res.status(200).json({
         success: true,
-        message: 'InternetSatellite updated successfully',
+        message: 'Internet satellite device updated successfully',
         internetSatellite
-    }); 
+    });
 });
 
 exports.deleteInternetSatellite = asyncHandler(async (req, res) => {
-    const internetSatellite = await InternetSatellite.findByIdAndDelete(req.params.id);
-    if (!internetSatellite) throw new ApiError('InternetSatellite not found', 404);
+    const internetSatellite = await deleteDocumentWithFiles(InternetSatellite, req.params.id, "uploads");
+    if (!internetSatellite) throw new ApiError("Internet satellite device not found", 404);
+
     return res.status(200).json({
         success: true,
-        message: 'InternetSatellite deleted successfully',
-        internetSatellite
+        message: "Internet satellite device deleted successfully (with images)",
+        internetSatellite,
     });
 });

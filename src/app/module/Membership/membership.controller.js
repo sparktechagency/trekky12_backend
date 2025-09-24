@@ -1,18 +1,32 @@
 const Membership = require('./Membership');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
-const upload = require('../../../utils/uploadConfig');
-const deleteFile = require('../../../utils/unlinkFile');
+const fs = require('fs');
+const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
-
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const deleteFile = require('../../../utils/unlinkFile');
+const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createMembership = asyncHandler(async (req, res) => {
-  const membership = await Membership.create(req.body);
+  const userId = req.user.id || req.user._id;
+  const selectedRvId = await getSelectedRvByUserId(userId);
+  let rvId = req.body.rvId;
+  if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+  if(!rvId) rvId = selectedRvId;
+  
+  const membership = await Membership.create({
+    rvId,
+    ...req.body,
+    user: userId,
+  });
+  
+  const images = req.files;
   if (!membership) throw new ApiError('Membership not created', 500);
-  if (!images) throw new ApiError('No images uploaded', 400);
 
   if (images && images.length > 0) {
-    const imagePaths = images.map(image => image.path);
+    const imagePaths = images.map(image => image.location);
     membership.images = imagePaths;
     await membership.save();
   }
@@ -24,13 +38,42 @@ exports.createMembership = asyncHandler(async (req, res) => {
   });
 });
 
-exports.getMembership = asyncHandler(async (req, res) => {
-  const membership = await Membership.find();
-  if (!membership) throw new ApiError('Membership not found', 404);
+exports.getMemberships = asyncHandler(async (req, res) => {
+  const userId = req.user.id || req.user._id;
+  const selectedRvId = await getSelectedRvByUserId(userId);
+  let rvId = req.query.rvId;
+  if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+  if(!rvId) rvId = selectedRvId;
+  
+  const baseQuery = { user: userId, rvId };
+
+  const membershipsQuery = new QueryBuilder(
+    Membership.find(baseQuery),
+    req.query
+  )
+  
+  const memberships = await membershipsQuery
+    .search(['name', 'organization', 'membershipType'])
+    .filter()
+    .sort()
+    .paginate()
+    .fields()
+    .modelQuery;
+
+  const meta = await new QueryBuilder(
+    Membership.find(baseQuery),
+    req.query
+  ).countTotal();
+
+  if (!memberships || memberships.length === 0) {
+    throw new ApiError('No memberships found', 404);
+  }
+
   return res.status(200).json({
     success: true,
-    message: 'Membership retrieved successfully',
-    membership
+    message: 'Memberships retrieved successfully',
+    meta,
+    memberships
   });
 });
 
@@ -44,86 +87,52 @@ exports.getMembershipById = asyncHandler(async (req, res) => {
   });
 });
 
-
 exports.updateMembership = asyncHandler(async (req, res) => {
-  
-});
+  const membership = await Membership.findById(req.params.id);
+  if (!membership) throw new ApiError('Membership not found', 404);
 
-exports.updateMembership = asyncHandler(async (req, res) => {
-    const membership = await Membership.findById(req.params.id);
-    if (!membership) throw new ApiError('Membership not found', 404);
+  // Update membership fields from req.body
+  Object.keys(req.body).forEach(key => {
+    membership[key] = req.body[key];
+  });
 
-    Object.keys(req.body).forEach(key => {
-        membership[key] = req.body[key];
+  await membership.save();
+
+  if (req.files && req.files.length > 0) {
+    const oldImages = membership.images;
+
+    // Delete old images from disk
+    oldImages.forEach(image => {
+      const path = image.split('/').pop();
+      try {
+        fs.unlinkSync(`${uploadPath}/${path}`);
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          console.error(err);
+        }
+      }
     });
 
+    // Set only new images
+    const newImages = req.files.map(image => image.location);
+    membership.images = newImages;
     await membership.save();
+  }
 
-
-    if (req.files && req.files.length > 0) {
-        const oldImages = membership.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        membership.images = newImages;
-    }
-
-    // if (req.files && req.files.length > 0) {
-    //     const oldImages = membership.images;
-    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
-    //     membership.images = [...oldImages, ...newImages];
-    //     await membership.save();
-
-    //     oldImages.forEach(image => {
-    //         const path = image.split('/').pop();
-    //         try {
-    //             deleteFile(`${uploadPath}/${path}`);
-    //         } catch (err) {
-    //             if (err.code !== 'ENOENT') {
-    //                 console.error(err);
-    //             }
-    //         }
-    //     });
-    // } else {
-    //     await membership.updateOne(req.body);
-    // }
-
-    return res.status(200).json({
-        success: true,
-        message: 'membership updated successfully',
-        membership
-    });
+  return res.status(200).json({
+    success: true,
+    message: 'Membership updated successfully',
+    membership
+  });
 });
-
-// exports.deleteMembership = asyncHandler(async (req, res) => {
-//   const membership = await Membership.findByIdAndDelete(req.params.id);
-//   if (!membership) throw new ApiError('Membership not found', 404);
-//   return res.status(200).json({
-//     success: true,
-//     message: 'Membership deleted successfully',
-//     membership
-//   });
-// });
 
 exports.deleteMembership = asyncHandler(async (req, res) => {
-    const membership = await deleteDocumentWithFiles(Membership, req.params.id, "uploads");
-    if (!membership) throw new ApiError("membership not found", 404);
+  const membership = await deleteDocumentWithFiles(Membership, req.params.id, "uploads");
+  if (!membership) throw new ApiError("Membership not found", 404);
 
-    return res.status(200).json({
-        success: true,
-        message: "membership deleted successfully (with images)",
-        membership,
-    });
+  return res.status(200).json({
+    success: true,
+    message: "Membership deleted successfully (with images)",
+    membership,
+  });
 });
