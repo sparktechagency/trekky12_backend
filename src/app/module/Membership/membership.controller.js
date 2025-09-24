@@ -8,6 +8,7 @@ const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
+const checkValidRv = require('../../../utils/checkValidRv');
 
 exports.createMembership = asyncHandler(async (req, res) => {
   const userId = req.user.id || req.user._id;
@@ -15,6 +16,11 @@ exports.createMembership = asyncHandler(async (req, res) => {
   let rvId = req.body.rvId;
   if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
   if(!rvId) rvId = selectedRvId;
+
+  const hasAccess = await checkValidRv(userId, rvId);
+  if (!hasAccess) {
+    throw new ApiError('You do not have permission to add membership for this RV', 403);
+  }
   
   const membership = await Membership.create({
     rvId,

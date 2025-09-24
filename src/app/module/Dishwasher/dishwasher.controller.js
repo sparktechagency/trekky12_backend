@@ -5,21 +5,27 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const User = require('../../module/User/User');
-
+const checkValidRv = require('../../../utils/checkValidRv');
 exports.createDishwasher = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
     // console.log(selectedRvId)
     let rvId = req.body.rvId;
     console.log(rvId)
-    
-    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
-    if(!rvId) {
+
+    if (!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if (!rvId) {
         // console.log("selectedRvId", selectedRvId)
         rvId = selectedRvId;
     };
 
-    
+    const hasAccess = await checkValidRv(userId, rvId);
+    if (!hasAccess) {
+        throw new ApiError('You do not have permission to add maintenance for this RV', 403);
+    }
+
+
+
     const dishwasher = await Dishwasher.create({
         rvId,
         ...req.body,
@@ -51,25 +57,25 @@ exports.getDishwashers = asyncHandler(async (req, res) => {
     console.log(selectedRvId)
     let rvId = req.query.rvId;
     console.log(rvId)
-    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
-    if(!rvId) rvId = selectedRvId;
+    if (!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if (!rvId) rvId = selectedRvId;
 
     // console.log(rvId)
-    
+
     const baseQuery = { user: userId, rvId };
-    
+
     const dishwasherQuery = new QueryBuilder(
         Dishwasher.find(baseQuery),
         req.query
     )
-    .search(['name', 'brand', 'model'])
-    .filter()
-    .sort()
-    .paginate()
-    .fields();
+        .search(['name', 'brand', 'model'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields();
 
     const dishwashers = await dishwasherQuery.modelQuery;
-    
+
     const meta = await new QueryBuilder(
         Dishwasher.find(baseQuery),
         req.query
@@ -90,9 +96,9 @@ exports.getDishwashers = asyncHandler(async (req, res) => {
 exports.getDishwasherById = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const dishwasher = await Dishwasher.findOne({ _id: req.params.id, user: userId });
-    
+
     if (!dishwasher) throw new ApiError('Dishwasher not found', 404);
-    
+
     return res.status(200).json({
         success: true,
         message: 'Dishwasher retrieved successfully',
@@ -103,7 +109,7 @@ exports.getDishwasherById = asyncHandler(async (req, res) => {
 exports.updateDishwasher = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const update = { ...req.body };
-    
+
     if (req.files && req.files.length > 0) {
         // Get current dishwasher to delete old images
         const currentDishwasher = await Dishwasher.findById(req.params.id);
@@ -111,19 +117,19 @@ exports.updateDishwasher = asyncHandler(async (req, res) => {
             // Delete old images from storage if needed
             // This depends on your storage solution
         }
-        
+
         // Set new images
         update.images = req.files.map(file => file.location);
     }
-    
+
     const dishwasher = await Dishwasher.findOneAndUpdate(
         { _id: req.params.id, user: userId },
         update,
         { new: true, runValidators: true }
     );
-    
+
     if (!dishwasher) throw new ApiError('Dishwasher not found', 404);
-    
+
     return res.status(200).json({
         success: true,
         message: 'Dishwasher updated successfully',

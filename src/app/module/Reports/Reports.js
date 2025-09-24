@@ -20,6 +20,18 @@ const reportSchema = new mongoose.Schema({
     note: {
         type: String,
     },
+    rvId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RV',
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    },
+    isFavorite: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     timestamps: true
 })

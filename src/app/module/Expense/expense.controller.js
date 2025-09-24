@@ -4,6 +4,7 @@ const { ApiError } = require('../../../errors/errorHandler');
 const QueryBuilder = require('../../../builder/queryBuilder');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const checkValidRv = require('../../../utils/checkValidRv');
 
 // @desc    Create a new expense
 // @route   POST /api/v1/expense/create
@@ -15,6 +16,11 @@ exports.createExpense = asyncHandler(async (req, res) => {
     
     if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
     if(!rvId) rvId = selectedRvId;
+
+    const hasAccess = await checkValidRv(userId, rvId);
+    if (!hasAccess) {
+        throw new ApiError('You do not have permission to add maintenance for this RV', 403);
+    }
     
     const expense = await Expense.create({
         rvId,
@@ -48,6 +54,8 @@ exports.getExpenses = asyncHandler(async (req, res) => {
     
     if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
     if(!rvId) rvId = selectedRvId;
+
+
     
     const baseQuery = { user: userId, rvId };
 

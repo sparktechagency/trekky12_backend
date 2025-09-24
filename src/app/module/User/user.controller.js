@@ -1,5 +1,5 @@
 const User = require('../User/User');
-const {ApiError} = require('../../../errors/errorHandler');
+const { ApiError } = require('../../../errors/errorHandler');
 const asyncHandler = require('../../../utils/asyncHandler');
 const tokenService = require('../../../utils/tokenService');
 const emailService = require('../../../utils/emailService');
@@ -10,9 +10,9 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.id)
         .populate({
             path: 'rvIds',
-            select: 'nickname'
+            select: 'nickname currentMileage'
         })
-        .populate('selectedRvId', 'nickname')
+        .populate('selectedRvId', 'nickname currentMileage')
         .select('-password');
     if (!user) throw new ApiError('User not found', 404);
     return res.status(200).json({
@@ -24,13 +24,18 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
 
 
 exports.updateUserProfile = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
     const { name, phone } = req.body;
     const update = { name, phone };
     if (req.file) {
         update.profilePic = req.file.location;
     }
-    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select('-password');
+    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select('-password')
+        .populate('rvIds', 'nickname currentMileage')
+        .populate('selectedRvId', 'nickname currentMileage')
     if (!user) throw new ApiError('User not found', 404);
+
+
     return res.status(200).json({
         success: true,
         message: 'User profile updated successfully',
@@ -48,7 +53,7 @@ exports.changePassword = asyncHandler(async (req, res) => { // start of change p
     if (oldPassword === newPassword) throw new ApiError('New password cannot be the same as the old password', 400); // if new password is the same as old password, throw error
     const isMatch = await bcrypt.compare(oldPassword, user.password); // compare old password with stored password in database
     if (!isMatch) throw new ApiError('Invalid old password', 401); // if old password is invalid, throw error
-    const salt = await bcrypt.genSalt(10);   
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     user.password = hashedPassword; // update user password
     await user.save(); // save user to database
@@ -76,7 +81,7 @@ exports.selectRV = asyncHandler(async (req, res) => {
     if (!user) throw new ApiError('User not found', 404); // if user does not exist, throw error
     if (user.rvIds.length > 1) {
         user.selectedRvId = rvId; // update user selected rv id
-    }else {
+    } else {
         user.selectedRvId = user.rvIds[0]; // update user selected rv id
     }
     await user.save(); // save user to database

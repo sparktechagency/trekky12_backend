@@ -4,6 +4,7 @@ const { ApiError } = require('../../../errors/errorHandler');
 const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
+const checkValidRv = require('../../../utils/checkValidRv');
 
 exports.createInsuranceCompany = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -12,6 +13,11 @@ exports.createInsuranceCompany = asyncHandler(async (req, res) => {
     
     if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
     if(!rvId) rvId = selectedRvId;
+
+    const hasAccess = await checkValidRv(userId, rvId);
+    if (!hasAccess) {
+        throw new ApiError('You do not have permission to add maintenance for this RV', 403);
+    }
     
     const insuranceCompany = await InsuranceCompany.create({
         rvId,

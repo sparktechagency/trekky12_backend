@@ -1,99 +1,197 @@
 const Report = require('./Reports');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
-const deleteFile = require('../../../utils/unlinkFile');
+const QueryBuilder = require('../../../builder/queryBuilder');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const checkValidRv = require('../../../utils/checkValidRv');
 
 exports.createReport = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
-    const report = await Report.create({ ...req.body, user: userId });
-    if (!report) throw new ApiError('Report not created', 500);
-    await report.save();
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+
+    const hasAccess = await checkValidRv(userId, rvId);
+    if (!hasAccess) {
+        throw new ApiError('You do not have permission to add reports for this RV', 403);
+    }
+    
+    const report = await Report.create({
+        rvId,
+        ...req.body,
+        user: userId,
+        status: 'pending' // Default status
+    });
+
     res.status(201).json({
         success: true,
         message: 'Report created successfully',
-        report
+        data: report
     });
 });
 
+exports.getReports = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
+    const fromDate = req.query.from;
+    const toDate = req.query.to;
 
-exports.getReport = asyncHandler(async (req, res) => {
-    const report = await Report.find();
-    if (!report) throw new ApiError('Report not found', 404);
-    return res.status(200).json({
+    let reportQuery = Report.find(baseQuery);
+    
+    if(fromDate && toDate) {
+        reportQuery = reportQuery.where('createdAt').gte(fromDate).lte(toDate);
+    }
+
+    reportQuery = new QueryBuilder(
+        reportQuery,
+        req.query
+    );
+    
+    const reports = await reportQuery
+        .search(['title', 'description', 'status', 'reportType'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        Report.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!reports || reports.length === 0) {
+        throw new ApiError('No reports found', 404);
+    }
+
+    res.status(200).json({
         success: true,
-        message: 'Report retrieved successfully',
-        report
+        message: 'Reports retrieved successfully',
+        meta,
+        data: reports
     });
 });
 
 exports.getReportById = asyncHandler(async (req, res) => {
-    const report = await Report.findById(req.params.id);
-    if (!report) throw new ApiError('Report not found', 404);
-    return res.status(200).json({
+    const userId = req.user.id || req.user._id;
+    
+    const report = await Report.findOne({
+        _id: req.params.id,
+        user: userId
+    });
+
+    if (!report) {
+        throw new ApiError('Report not found or access denied', 404);
+    }
+
+    res.status(200).json({
         success: true,
         message: 'Report retrieved successfully',
-        report
+        data: report
     });
 });
-
 
 exports.updateReport = asyncHandler(async (req, res) => {
-    const report = await Report.findByIdAndUpdate(req.params.id, { ...req.body, user: req.user._id }, { new: true });
-    if (!report) throw new ApiError('Report not found', 404);
-    return res.status(200).json({
+    const userId = req.user.id || req.user._id;
+    
+    const report = await Report.findOne({
+        _id: req.params.id,
+        user: userId
+    });
+    
+    if (!report) {
+        throw new ApiError('Report not found or access denied', 404);
+    }
+
+    // Update report fields from req.body
+    Object.keys(req.body).forEach(key => {
+        if (key !== 'images') { // Don't override images from req.body
+            report[key] = req.body[key];
+        }
+    });
+
+    // Handle image updates if new files are uploaded
+    if (req.files && req.files.length > 0) {
+        // Keep existing images and add new ones
+        const newImages = req.files.map(file => file.location);
+        report.images = [...(report.images || []), ...newImages];
+    }
+
+    await report.save();
+
+    res.status(200).json({
         success: true,
         message: 'Report updated successfully',
-        report
+        data: report
     });
 });
-
 
 exports.deleteReport = asyncHandler(async (req, res) => {
-    const report = await Report.findByIdAndDelete(req.params.id);
-    if (!report) throw new ApiError('Report not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'Report deleted successfully',
-        report
-    });
-});
-
-exports.addFavoriteReport = asyncHandler(async (req, res) => {
-    const user = req.user;
-    if (!user.favorites) user.favorites = [];
-    if (!user.favorites.includes(req.params.id)) {
-        user.favorites.push(req.params.id);
-        await user.save();
-    }
+    const report = await deleteDocumentWithFiles(Report, req.params.id, "uploads");
+    if (!report) throw new ApiError("Report not found", 404);
 
     return res.status(200).json({
         success: true,
-        message: 'Report added to favorites',
+        message: "Report deleted successfully",
+        data: report
     });
 });
 
-exports.removeFavoriteReport = asyncHandler(async (req, res) => {
-    const user = req.user;
-    if (!user.favorites) user.favorites = [];
-    const index = user.favorites.indexOf(req.params.id);
-    if (index > -1) {
-        user.favorites.splice(index, 1);
-        await user.save();
-    }
-
-    return res.status(200).json({
+// Favorite functionality
+exports.toggleFavoriteReport = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    
+    // First, find the current report to get its current isFavorite status
+    const currentReport = await Report.findOne({ _id: req.params.id, user: userId });
+    if (!currentReport) throw new ApiError('Report not found', 404);
+    
+    // Then update with the toggled value
+    const report = await Report.findOneAndUpdate(
+        { _id: req.params.id, user: userId },
+        { $set: { isFavorite: !currentReport.isFavorite } },
+        { new: true }
+    );
+    
+    res.status(200).json({
         success: true,
-        message: 'Report removed from favorites',
+        message: report.isFavorite ? 'Report added to favorites' : 'Report removed from favorites',
+        data: report
     });
 });
 
+exports.getFavoriteReports = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    
+    const reportsQuery = Report.find({ 
+        isFavorite: true,
+        user: userId 
+    });
 
-exports.getFavoriteReport = asyncHandler(async (req, res) => {
-    const user = req.user;
-    const reports = await Report.find({ _id: { $in: user.favorites } });
-    return res.status(200).json({
+    const reports = await new QueryBuilder(
+        reportsQuery,
+        req.query
+    )
+    .paginate()
+    .modelQuery;
+    
+    const meta = await new QueryBuilder(
+        reportsQuery,
+        req.query
+    ).countTotal();
+    
+    res.status(200).json({
         success: true,
         message: 'Favorite reports retrieved successfully',
-        reports
+        meta,
+        data: reports
     });
 });

@@ -7,6 +7,7 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
+const checkValidRv = require('../../../utils/checkValidRv');
 const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createExhaustFans = asyncHandler(async (req, res) => {
@@ -15,6 +16,11 @@ exports.createExhaustFans = asyncHandler(async (req, res) => {
     let rvId = req.body.rvId;
     if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
     if(!rvId) rvId = selectedRvId;
+
+    const hasAccess = await checkValidRv(userId, rvId);
+    if (!hasAccess) {
+        throw new ApiError('You do not have permission to add maintenance for this RV', 403);
+    }
     
     const exhaustFans = await ExhaustFans.create({
         rvId,

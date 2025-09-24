@@ -1,79 +1,148 @@
 const NewRepair = require('./NewRepair');
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
-const deleteFile = require('../../../utils/unlinkFile');
+const QueryBuilder = require('../../../builder/queryBuilder');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const checkValidRv = require('../../../utils/checkValidRv');
 
 exports.createNewRepair = asyncHandler(async (req, res) => {
-    const newRepair = await NewRepair.create(req.body);
-    if (!newRepair) throw new ApiError('NewRepair not created', 500);
-    const images = req.files.map(file => file.path);
-    newRepair.images = images;
-    await newRepair.save();
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+
+    const hasAccess = await checkValidRv(userId, rvId);
+    if (!hasAccess) {
+        throw new ApiError('You do not have permission to add repairs for this RV', 403);
+    }
+    
+    const newRepair = await NewRepair.create({
+        rvId,
+        ...req.body,
+        user: userId,
+        status: 'pending' // Default status
+    });
+    
+    const images = req.files;
+    if (!newRepair) throw new ApiError('Repair request not created', 500);
+
+    if (images && images.length > 0) {
+        const imagePaths = images.map(image => image.location);
+        newRepair.images = imagePaths;
+        await newRepair.save();
+    }
+
     res.status(201).json({
         success: true,
-        message: 'NewRepair created successfully',
-        newRepair
+        message: 'Repair request created successfully',
+        data: newRepair
     });
 });
 
+exports.getNewRepairs = asyncHandler(async (req, res) => {
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
 
-exports.getNewRepair = asyncHandler(async (req, res) => {
-    const newRepair = await NewRepair.find();
-    if (!newRepair) throw new ApiError('NewRepair not found', 404);
-    return res.status(200).json({
+    const newRepairQuery = new QueryBuilder(
+        NewRepair.find(baseQuery),
+        req.query
+    );
+    
+    const newRepairs = await newRepairQuery
+        .search(['title', 'description', 'status', 'repairType'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        NewRepair.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!newRepairs || newRepairs.length === 0) {
+        throw new ApiError('No repair requests found', 404);
+    }
+
+    res.status(200).json({
         success: true,
-        message: 'NewRepair retrieved successfully',
-        newRepair
+        message: 'Repair requests retrieved successfully',
+        meta,
+        data: newRepairs
     });
 });
 
 exports.getNewRepairById = asyncHandler(async (req, res) => {
-    const newRepair = await NewRepair.findById(req.params.id);
-    if (!newRepair) throw new ApiError('NewRepair not found', 404);
-    return res.status(200).json({
+    const userId = req.user.id || req.user._id;
+    
+    const newRepair = await NewRepair.findOne({
+        _id: req.params.id,
+        user: userId
+    });
+
+    if (!newRepair) {
+        throw new ApiError('Repair request not found or access denied', 404);
+    }
+
+    res.status(200).json({
         success: true,
-        message: 'NewRepair retrieved successfully',
-        newRepair
+        message: 'Repair request retrieved successfully',
+        data: newRepair
     });
 });
 
 exports.updateNewRepair = asyncHandler(async (req, res) => {
-    const newRepair = await NewRepair.findById(req.params.id);
-    if (!newRepair) throw new ApiError('NewRepair not found', 404);
-
-    if (req.files && req.files.length > 0) {
-        const oldImages = newRepair.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        newRepair.images = [...oldImages, ...newImages];
-        await newRepair.save();
-
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                deleteFile(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-    } else {
-        await newRepair.updateOne(req.body);
+    const userId = req.user.id || req.user._id;
+    
+    const newRepair = await NewRepair.findOne({
+        _id: req.params.id,
+        user: userId
+    });
+    
+    if (!newRepair) {
+        throw new ApiError('Repair request not found or access denied', 404);
     }
 
-    return res.status(200).json({
+    // Update repair fields from req.body
+    Object.keys(req.body).forEach(key => {
+        if (key !== 'images') { // Don't override images from req.body
+            newRepair[key] = req.body[key];
+        }
+    });
+
+    // Handle image updates if new files are uploaded
+    if (req.files && req.files.length > 0) {
+        // Keep existing images and add new ones
+        const newImages = req.files.map(file => file.location);
+        newRepair.images = [...(newRepair.images || []), ...newImages];
+    }
+
+    await newRepair.save();
+
+    res.status(200).json({
         success: true,
-        message: 'NewRepair updated successfully',
-        newRepair
+        message: 'Repair request updated successfully',
+        data: newRepair
     });
 });
 
-exports.deleteNewRepair = asyncHandler(async (req, res) => {  
-    const newRepair = await NewRepair.findByIdAndDelete(req.params.id);
-    if (!newRepair) throw new ApiError('NewRepair not found', 404);
+exports.deleteNewRepair = asyncHandler(async (req, res) => {
+    const newRepair = await deleteDocumentWithFiles(NewRepair, req.params.id, "uploads");
+    if (!newRepair) throw new ApiError("Repair request not found", 404);
+
     return res.status(200).json({
         success: true,
-        message: 'NewRepair deleted successfully',
-        newRepair
+        message: "Repair request deleted successfully",
+        data: newRepair
     });
 });
