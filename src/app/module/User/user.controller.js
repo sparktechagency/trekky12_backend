@@ -7,7 +7,12 @@ const bcrypt = require('bcrypt');
 
 
 exports.getUserProfile = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id)
+        .populate({
+            path: 'rvIds',
+            select: 'nickname'
+        })
+        .select('-password');
     if (!user) throw new ApiError('User not found', 404);
     return res.status(200).json({
         success: true,
