@@ -12,6 +12,7 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
             path: 'rvIds',
             select: 'nickname'
         })
+        .populate('selectedRvId', 'nickname')
         .select('-password');
     if (!user) throw new ApiError('User not found', 404);
     return res.status(200).json({
