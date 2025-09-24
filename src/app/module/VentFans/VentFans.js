@@ -27,6 +27,16 @@ const ventFansSchema = new mongoose.Schema({
     images: {
         type: [String], // image URLs or file paths
         default: [],
+    },
+    rvId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RV',
+        required: true
+    },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     }
 }, { timestamps: true });
 

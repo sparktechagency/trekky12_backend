@@ -1,87 +1,138 @@
 const VentFans = require('./VentFans');
-
 const asyncHandler = require('../../../utils/asyncHandler');
 const { ApiError } = require('../../../errors/errorHandler');
+const fs = require('fs');
+const path = require('path');
+const QueryBuilder = require('../../../builder/queryBuilder');
+const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
+const getSelectedRvByUserId = require('../../../utils/currentRv');
+const deleteFile = require('../../../utils/unlinkFile');
+const uploadPath = path.join(__dirname, '../uploads');
 
 exports.createVentFans = asyncHandler(async (req, res) => {
-    const ventFans = await VentFans.create(req.body);
-    if (!ventFans) throw new ApiError('VentFans not created', 500);
-    const images = req.files;
-    if (!images) throw new ApiError('No images uploaded', 400); 
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.body.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
     
+    const ventFans = await VentFans.create({
+        rvId,
+        ...req.body,
+        user: userId,
+    });
+    
+    const images = req.files;
+    if (!ventFans) throw new ApiError('Vent fan not created', 500);
+
     if (images && images.length > 0) {
-        const imagePaths = images.map(image => image.path);
+        const imagePaths = images.map(image => image.location);
         ventFans.images = imagePaths;
         await ventFans.save();
     }
 
-    return res.status(201).json({
+    res.status(201).json({
         success: true,
-        message: 'VentFans created successfully',
+        message: 'Vent fan created successfully',
         ventFans
     });
 });
-
-
 
 exports.getVentFans = asyncHandler(async (req, res) => {
-    const ventFans = await VentFans.find();
-    if (!ventFans) throw new ApiError('VentFans not found', 404);
+    const userId = req.user.id || req.user._id;
+    const selectedRvId = await getSelectedRvByUserId(userId);
+    let rvId = req.query.rvId;
+    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
+    if(!rvId) rvId = selectedRvId;
+    
+    const baseQuery = { user: userId, rvId };
+
+    const ventFansQuery = new QueryBuilder(
+        VentFans.find(baseQuery),
+        req.query
+    )
+    
+    const ventFans = await ventFansQuery
+        .search(['name', 'brand', 'modelNumber'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+
+    const meta = await new QueryBuilder(
+        VentFans.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!ventFans || ventFans.length === 0) {
+        throw new ApiError('Vent fans not found', 404);
+    }
+
     return res.status(200).json({
         success: true,
-        message: 'VentFans retrieved successfully',
+        message: 'Vent fans retrieved successfully',
+        meta,
         ventFans
     });
 });
 
-exports.getVentFansById = asyncHandler(async (req, res) => {
-    const ventFans = await VentFans.findById(req.params.id);
-    if (!ventFans) throw new ApiError('VentFans not found', 404);
+exports.getVentFanById = asyncHandler(async (req, res) => {
+    const ventFan = await VentFans.findById(req.params.id);
+    if (!ventFan) throw new ApiError('Vent fan not found', 404);
     return res.status(200).json({
         success: true,
-        message: 'VentFans retrieved successfully',
-        ventFans
+        message: 'Vent fan retrieved successfully',
+        ventFan
     });
 });
 
+exports.updateVentFan = asyncHandler(async (req, res) => {
+    const ventFan = await VentFans.findById(req.params.id);
+    if (!ventFan) throw new ApiError('Vent fan not found', 404);
 
-exports.deleteVentFans = asyncHandler(async (req, res) => {
-    const ventFans = await VentFans.findByIdAndDelete(req.params.id);
-    if (!ventFans) throw new ApiError('VentFans not found', 404);
-    return res.status(200).json({
-        success: true,
-        message: 'VentFans deleted successfully',
-        ventFans
+    // Update vent fan fields from req.body
+    Object.keys(req.body).forEach(key => {
+        ventFan[key] = req.body[key];
     });
-});
 
-exports.updateVentFans = asyncHandler(async (req, res) => {
-    const ventFans = await VentFans.findById(req.params.id);
-    if (!ventFans) throw new ApiError('VentFans not found', 404);
+    await ventFan.save();
 
     if (req.files && req.files.length > 0) {
-        const oldImages = ventFans.images;
-        const newImages = req.files.map(image => image.path.replace('upload/', ''));
-        ventFans.images = [...oldImages, ...newImages];
-        await ventFans.save();
+        const oldImages = ventFan.images;
 
+        // Delete old images from disk
         oldImages.forEach(image => {
             const path = image.split('/').pop();
             try {
-                deleteFile(`${uploadPath}/${path}`);
+                fs.unlinkSync(`${uploadPath}/${path}`);
             } catch (err) {
                 if (err.code !== 'ENOENT') {
                     console.error(err);
                 }
             }
         });
-    } else {
-        await ventFans.updateOne(req.body);
+
+        // Set only new images
+        const newImages = req.files.map(image => image.location);
+        ventFan.images = newImages;
+        await ventFan.save();
     }
 
     return res.status(200).json({
         success: true,
-        message: 'VentFans updated successfully',
-        ventFans
+        message: 'Vent fan updated successfully',
+        ventFan
+    });
+});
+
+exports.deleteVentFan = asyncHandler(async (req, res) => {
+    const ventFan = await deleteDocumentWithFiles(VentFans, req.params.id, "uploads");
+    if (!ventFan) throw new ApiError("Vent fan not found", 404);
+
+    return res.status(200).json({
+        success: true,
+        message: "Vent fan deleted successfully (with images)",
+        ventFan,
     });
 });
