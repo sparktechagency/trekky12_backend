@@ -57,7 +57,7 @@ exports.changePassword = asyncHandler(async (req, res) => { // start of change p
     if (newPassword !== confirmPassword) throw new ApiError('Confirm password do not match', 400); // if new and confirm password do not match, throw error
     if (oldPassword === newPassword) throw new ApiError('New password cannot be the same as the old password', 400); // if new password is the same as old password, throw error
     const isMatch = await bcrypt.compare(oldPassword, user.password); // compare old password with stored password in database
-    if (!isMatch) throw new ApiError('Invalid old password', 401); // if old password is invalid, throw error
+    if (!isMatch) throw new ApiError('Invalid old password', 404); // if old password is invalid, throw error
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
     user.password = hashedPassword; // update user password

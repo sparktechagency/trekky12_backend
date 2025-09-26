@@ -8,6 +8,7 @@ const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createToilet = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -67,7 +68,12 @@ exports.getToilets = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!toilets || toilets.length === 0) {
-        throw new ApiError('Toilets not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No toilets found',
+            meta,
+            toilets
+        });
     }
 
     return res.status(200).json({
@@ -88,36 +94,69 @@ exports.getToiletById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateToilet = asyncHandler(async (req, res) => {
+//     const toilet = await Toilet.findById(req.params.id);
+//     if (!toilet) throw new ApiError('Toilet not found', 404);
+
+//     // Update toilet fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         toilet[key] = req.body[key];
+//     });
+
+//     await toilet.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = toilet.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         toilet.images = newImages;
+//         await toilet.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Toilet updated successfully',
+//         toilet
+//     });
+// });
+
 exports.updateToilet = asyncHandler(async (req, res) => {
     const toilet = await Toilet.findById(req.params.id);
     if (!toilet) throw new ApiError('Toilet not found', 404);
 
-    // Update toilet fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         toilet[key] = req.body[key];
     });
 
-    await toilet.save();
-
-    if (req.files && req.files.length > 0) {
-        const oldImages = toilet.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        toilet.images = newImages;
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...toilet.images];
+        
+        // Update with new images
+        toilet.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
         await toilet.save();
+
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await   toilet.save();
     }
 
     return res.status(200).json({
@@ -126,6 +165,7 @@ exports.updateToilet = asyncHandler(async (req, res) => {
         toilet
     });
 });
+
 
 exports.deleteToilet = asyncHandler(async (req, res) => {
     const toilet = await deleteDocumentWithFiles(Toilet, req.params.id, "uploads");

@@ -9,6 +9,7 @@ const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const checkValidRv = require('../../../utils/checkValidRv');
 const uploadPath = path.join(__dirname, '../uploads');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createDryer = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -74,7 +75,12 @@ exports.getDryers = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!dryers || dryers.length === 0) {
-        throw new ApiError('Dryers not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No Dryers found',
+            meta,
+            dryers
+        });
     }
 
     return res.status(200).json({
@@ -95,35 +101,68 @@ exports.getDryerById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateDryer = asyncHandler(async (req, res) => {
+//     const dryer = await Dryer.findById(req.params.id);
+//     if (!dryer) throw new ApiError('Dryer not found', 404);
+
+//     // Update dryer fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         dryer[key] = req.body[key];
+//     });
+
+//     await dryer.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = dryer.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         dryer.images = newImages;
+//         await dryer.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Dryer updated successfully',
+//         dryer
+//     });
+// });
+
 exports.updateDryer = asyncHandler(async (req, res) => {
     const dryer = await Dryer.findById(req.params.id);
     if (!dryer) throw new ApiError('Dryer not found', 404);
 
-    // Update dryer fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         dryer[key] = req.body[key];
     });
 
-    await dryer.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...dryer.images];
+        
+        // Update with new images
+        dryer.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await dryer.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = dryer.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        dryer.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
         await dryer.save();
     }
 

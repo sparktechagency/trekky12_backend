@@ -7,6 +7,7 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv')
 const deleteFile = require('../../../utils/unlinkFile');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 const uploadPath = path.join(__dirname, '../uploads');
 
@@ -65,7 +66,12 @@ exports.getWaterPump = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!waterPump || waterPump.length === 0) {
-        throw new ApiError('WaterPump not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No water pumps found',
+            meta,
+            waterPump
+        });
     }
 
     return res.status(200).json({
@@ -86,33 +92,66 @@ exports.getWaterPumpById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateWaterPump = asyncHandler(async (req, res) => {
+//     const waterPump = await WaterPump.findById(req.params.id);
+//     if (!waterPump) throw new ApiError('WaterPump not found', 404);
+
+//     Object.keys(req.body).forEach(key => {
+//         waterPump[key] = req.body[key];
+//     });
+//     await waterPump.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = waterPump.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         waterPump.images = newImages;
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'WaterPump updated successfully',
+//         waterPump
+//     });
+// });
+
 exports.updateWaterPump = asyncHandler(async (req, res) => {
     const waterPump = await WaterPump.findById(req.params.id);
     if (!waterPump) throw new ApiError('WaterPump not found', 404);
 
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         waterPump[key] = req.body[key];
     });
-    await waterPump.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = waterPump.images;
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...waterPump.images];
+        
+        // Update with new images
+        waterPump.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await waterPump.save();
 
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        waterPump.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await   waterPump.save();
     }
 
     return res.status(200).json({
@@ -121,6 +160,7 @@ exports.updateWaterPump = asyncHandler(async (req, res) => {
         waterPump
     });
 });
+
 
 
 exports.deleteWaterPump = asyncHandler(async (req, res) => {

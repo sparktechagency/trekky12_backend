@@ -9,6 +9,8 @@ const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const checkValidRv = require('../../../utils/checkValidRv');
 const uploadPath = path.join(__dirname, '../uploads');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
+
 
 exports.createGps = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -72,7 +74,12 @@ exports.getGps = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!gps || gps.length === 0) {
-        throw new ApiError('GPS devices not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No GPS devices found',
+            meta,
+            gps
+        });
     }
 
     return res.status(200).json({
@@ -93,35 +100,68 @@ exports.getGpsById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateGps = asyncHandler(async (req, res) => {
+//     const gps = await Gps.findById(req.params.id);
+//     if (!gps) throw new ApiError('GPS device not found', 404);
+
+//     // Update GPS device fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         gps[key] = req.body[key];
+//     });
+
+//     await gps.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = gps.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         gps.images = newImages;
+//         await gps.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'GPS device updated successfully',
+//         gps
+//     });
+// });
+
 exports.updateGps = asyncHandler(async (req, res) => {
     const gps = await Gps.findById(req.params.id);
     if (!gps) throw new ApiError('GPS device not found', 404);
 
-    // Update GPS device fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         gps[key] = req.body[key];
     });
 
-    await gps.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...gps.images];
+        
+        // Update with new images
+        gps.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await gps.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = gps.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        gps.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
         await gps.save();
     }
 
@@ -131,6 +171,7 @@ exports.updateGps = asyncHandler(async (req, res) => {
         gps
     });
 });
+
 
 exports.deleteGps = asyncHandler(async (req, res) => {
     const gps = await deleteDocumentWithFiles(Gps, req.params.id, "uploads");

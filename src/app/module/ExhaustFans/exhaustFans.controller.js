@@ -9,6 +9,7 @@ const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const checkValidRv = require('../../../utils/checkValidRv');
 const uploadPath = path.join(__dirname, '../uploads');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createExhaustFans = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -73,7 +74,12 @@ exports.getExhaustFans = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!exhaustFansList || exhaustFansList.length === 0) {
-        throw new ApiError('ExhaustFans not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No ExhaustFans found',
+            meta,
+            exhaustFans: exhaustFansList
+        });
     }
 
     return res.status(200).json({
@@ -94,35 +100,68 @@ exports.getExhaustFansById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateExhaustFans = asyncHandler(async (req, res) => {
+//     const exhaustFans = await ExhaustFans.findById(req.params.id);
+//     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
+
+//     // Update exhaustFans fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         exhaustFans[key] = req.body[key];
+//     });
+
+//     await exhaustFans.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = exhaustFans.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         exhaustFans.images = newImages;
+//         await exhaustFans.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'ExhaustFans updated successfully',
+//         exhaustFans
+//     });
+// });
+
 exports.updateExhaustFans = asyncHandler(async (req, res) => {
     const exhaustFans = await ExhaustFans.findById(req.params.id);
     if (!exhaustFans) throw new ApiError('ExhaustFans not found', 404);
 
-    // Update exhaustFans fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         exhaustFans[key] = req.body[key];
     });
 
-    await exhaustFans.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...exhaustFans.images];
+        
+        // Update with new images
+        exhaustFans.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await exhaustFans.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = exhaustFans.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        exhaustFans.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
         await exhaustFans.save();
     }
 

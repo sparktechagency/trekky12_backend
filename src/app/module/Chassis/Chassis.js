@@ -30,7 +30,6 @@ const chassisSchema = new mongoose.Schema({
     },
     hp: {
         type: Number,
-        required: true
     },
     belt: [{
         name: {

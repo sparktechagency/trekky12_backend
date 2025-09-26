@@ -9,6 +9,7 @@ const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createCellingFans = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -73,7 +74,12 @@ exports.getCellingFans = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!cellingFans || cellingFans.length === 0) {
-        throw new ApiError('CellingFans not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No cellingFans found',
+            meta,
+            cellingFans
+        });
     }
 
     return res.status(200).json({
@@ -94,35 +100,69 @@ exports.getCellingFansById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateCellingFans = asyncHandler(async (req, res) => {
+//     const cellingFans = await CellingFans.findById(req.params.id);
+//     if (!cellingFans) throw new ApiError('CellingFans not found', 404);
+
+//     // Update cellingFans fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         cellingFans[key] = req.body[key];
+//     });
+
+//     await cellingFans.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = cellingFans.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         cellingFans.images = newImages;
+//         await cellingFans.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'CellingFans updated successfully',
+//         cellingFans
+//     });
+// });
+
+
 exports.updateCellingFans = asyncHandler(async (req, res) => {
     const cellingFans = await CellingFans.findById(req.params.id);
     if (!cellingFans) throw new ApiError('CellingFans not found', 404);
 
-    // Update cellingFans fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         cellingFans[key] = req.body[key];
     });
 
-    await cellingFans.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...cellingFans.images];
+        
+        // Update with new images
+        cellingFans.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await cellingFans.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = cellingFans.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        cellingFans.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
         await cellingFans.save();
     }
 

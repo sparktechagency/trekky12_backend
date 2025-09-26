@@ -9,6 +9,7 @@ const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const checkValidRv = require('../../../utils/checkValidRv');
 const uploadPath = path.join(__dirname, '../uploads');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createHeater = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -73,7 +74,12 @@ exports.getHeaters = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!heaters || heaters.length === 0) {
-        throw new ApiError('Heaters not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No heaters found',
+            meta,
+            heaters
+        });
     }
 
     return res.status(200).json({
@@ -94,35 +100,68 @@ exports.getHeaterById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateHeater = asyncHandler(async (req, res) => {
+//     const heater = await Heater.findById(req.params.id);
+//     if (!heater) throw new ApiError('Heater not found', 404);
+
+//     // Update heater fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         heater[key] = req.body[key];
+//     });
+
+//     await heater.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = heater.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         heater.images = newImages;
+//         await heater.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Heater updated successfully',
+//         heater
+//     });
+// });
+
 exports.updateHeater = asyncHandler(async (req, res) => {
     const heater = await Heater.findById(req.params.id);
     if (!heater) throw new ApiError('Heater not found', 404);
 
-    // Update heater fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         heater[key] = req.body[key];
     });
 
-    await heater.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...heater.images];
+        
+        // Update with new images
+        heater.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await heater.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = heater.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        heater.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
         await heater.save();
     }
 
@@ -132,6 +171,7 @@ exports.updateHeater = asyncHandler(async (req, res) => {
         heater
     });
 });
+
 
 exports.deleteHeater = asyncHandler(async (req, res) => {
     const heater = await deleteDocumentWithFiles(Heater, req.params.id, "uploads");

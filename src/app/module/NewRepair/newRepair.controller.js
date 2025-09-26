@@ -5,6 +5,7 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createNewRepair = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -58,7 +59,7 @@ exports.getNewRepairs = asyncHandler(async (req, res) => {
     );
     
     const newRepairs = await newRepairQuery
-        .search(['title', 'description', 'status', 'repairType'])
+        .search(['cost', 'qty'])
         .filter()
         .sort()
         .paginate()
@@ -71,7 +72,12 @@ exports.getNewRepairs = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!newRepairs || newRepairs.length === 0) {
-        throw new ApiError('No repair requests found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No repair requests found',
+            meta,
+            data: newRepairs
+        });
     }
 
     res.status(200).json({
@@ -101,35 +107,68 @@ exports.getNewRepairById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateNewRepair = asyncHandler(async (req, res) => {
+//     const userId = req.user.id || req.user._id;
+    
+//     const newRepair = await NewRepair.findOne({
+//         _id: req.params.id,
+//         user: userId
+//     });
+    
+//     if (!newRepair) {
+//         throw new ApiError('Repair request not found or access denied', 404);
+//     }
+
+//     // Update repair fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         if (key !== 'images') { // Don't override images from req.body
+//             newRepair[key] = req.body[key];
+//         }
+//     });
+
+//     // Handle image updates if new files are uploaded
+//     if (req.files && req.files.length > 0) {
+//         // Keep existing images and add new ones
+//         const newImages = req.files.map(file => file.location);
+//         newRepair.images = [...(newRepair.images || []), ...newImages];
+//     }
+
+//     await newRepair.save();
+
+//     res.status(200).json({
+//         success: true,
+//         message: 'Repair request updated successfully',
+//         data: newRepair
+//     });
+// });
+
 exports.updateNewRepair = asyncHandler(async (req, res) => {
-    const userId = req.user.id || req.user._id;
-    
-    const newRepair = await NewRepair.findOne({
-        _id: req.params.id,
-        user: userId
-    });
-    
-    if (!newRepair) {
-        throw new ApiError('Repair request not found or access denied', 404);
-    }
+    const newRepair = await NewRepair.findById(req.params.id);
+    if (!newRepair) throw new ApiError('Repair request not found', 404);
 
-    // Update repair fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
-        if (key !== 'images') { // Don't override images from req.body
-            newRepair[key] = req.body[key];
-        }
+        newRepair[key] = req.body[key];
     });
 
-    // Handle image updates if new files are uploaded
-    if (req.files && req.files.length > 0) {
-        // Keep existing images and add new ones
-        const newImages = req.files.map(file => file.location);
-        newRepair.images = [...(newRepair.images || []), ...newImages];
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...newRepair.images];
+        
+        // Update with new images
+        newRepair.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await newRepair.save();
+
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await newRepair.save();
     }
 
-    await newRepair.save();
-
-    res.status(200).json({
+    return res.status(200).json({
         success: true,
         message: 'Repair request updated successfully',
         data: newRepair

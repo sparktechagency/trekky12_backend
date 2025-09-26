@@ -8,7 +8,7 @@ const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages
 const getSelectedRvByUserId = require('../../../utils/currentRv')
 const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
-
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 
 
@@ -68,7 +68,12 @@ exports.getTire = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!tires || tires.length === 0) {
-        throw new ApiError('Tires not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No tires found',
+            meta,
+            tires
+        });
     }
 
     return res.status(200).json({
@@ -89,54 +94,86 @@ exports.getTireById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateTire = asyncHandler(async (req, res) => {
+//     const tire = await Tire.findById(req.params.id);
+//     if (!tire) throw new ApiError('Tire not found', 404);
+
+//     // 1. Update fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         tire[key] = req.body[key];
+//     });
+
+//     await tire.save();
+
+//     // if (req.files && req.files.length > 0) {
+//     //     const oldImages = tire.images;
+//     //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
+//     //     tire.images = [...oldImages, ...newImages];
+//     //     await tire.save();
+
+//     //     oldImages.forEach(image => {
+//     //         const path = image.split('/').pop();
+//     //         try {
+//     //             fs.unlinkSync(`${uploadPath}/${path}`);
+//     //         } catch (err) {
+//     //             if (err.code !== 'ENOENT') {
+//     //                 console.error(err);
+//     //             }
+//     //         }
+//     //     });
+//     // }
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = tire.images;
+
+//         // 2. Handle file uploads if any
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         tire.images = newImages;
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Tire updated successfully',
+//         tire
+//     });
+// });
+
 exports.updateTire = asyncHandler(async (req, res) => {
     const tire = await Tire.findById(req.params.id);
     if (!tire) throw new ApiError('Tire not found', 404);
 
-
-    // Update tire fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         tire[key] = req.body[key];
     });
 
-    await tire.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...tire.images];
+        
+        // Update with new images
+        tire.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await tire.save();
 
-    // if (req.files && req.files.length > 0) {
-    //     const oldImages = tire.images;
-    //     const newImages = req.files.map(image => image.path.replace('upload/', ''));
-    //     tire.images = [...oldImages, ...newImages];
-    //     await tire.save();
-
-    //     oldImages.forEach(image => {
-    //         const path = image.split('/').pop();
-    //         try {
-    //             fs.unlinkSync(`${uploadPath}/${path}`);
-    //         } catch (err) {
-    //             if (err.code !== 'ENOENT') {
-    //                 console.error(err);
-    //             }
-    //         }
-    //     });
-    // }
-
-    if (req.files && req.files.length > 0) {
-        const oldImages = tire.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        tire.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await   tire.save();
     }
 
     return res.status(200).json({
@@ -145,6 +182,7 @@ exports.updateTire = asyncHandler(async (req, res) => {
         tire
     });
 });
+
 
 exports.deleteTire = asyncHandler(async (req, res) => {
     const tire = await deleteDocumentWithFiles(Tire, req.params.id, "uploads");

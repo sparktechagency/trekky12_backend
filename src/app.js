@@ -82,7 +82,7 @@ app.use('/api/expense', require('./app/module/Expense/expense.router'));
 app.use('/api/maintenance-schedule', require('./app/module/MaintenanceSchedule/maintenanceSchedule.router'));
 app.use('/api/dashboard', require('./app/module/Dashboard/dashboard.router'));
 app.use('/api/manage', require('./app/module/Manage/manage.router'));
-
+app.use('/api/admin', require('./app/module/Admin/admin.router'));
 
 app.get('/', (req, res) => {
   res.send("All ok")

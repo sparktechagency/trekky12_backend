@@ -46,9 +46,9 @@ class TokenService {
       return jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new ApiError('Token has expired', 401);
+        throw new ApiError('Token has expired', 403);
       }
-      throw new ApiError('Invalid token', 401);
+      throw new ApiError('Invalid token', 403);
     }
   }
 
@@ -66,9 +66,9 @@ class TokenService {
       return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new ApiError('Refresh token has expired, please login again', 401);
+        throw new ApiError('Refresh token has expired, please login again', 403);
       }
-      throw new ApiError('Invalid refresh token', 401);
+      throw new ApiError('Invalid refresh token', 403);
     }
   }
 

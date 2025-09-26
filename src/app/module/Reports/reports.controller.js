@@ -5,6 +5,7 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createReport = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -36,48 +37,64 @@ exports.createReport = asyncHandler(async (req, res) => {
 exports.getReports = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    let rvId = req.query.rvId;
-    
-    if(!rvId && !selectedRvId) throw new ApiError('No selected RV found', 404);
-    if(!rvId) rvId = selectedRvId;
-    
-    const baseQuery = { user: userId, rvId };
-    const fromDate = req.query.from;
-    const toDate = req.query.to;
-
-    let reportQuery = Report.find(baseQuery);
-    
-    if(fromDate && toDate) {
-        reportQuery = reportQuery.where('createdAt').gte(fromDate).lte(toDate);
+  
+    let { rvId, from, to, searchTerm, sort, page = 1, limit = 10 } = req.query;
+  
+    if (!rvId && !selectedRvId) {
+      throw new ApiError("No selected RV found", 404);
     }
-
-    reportQuery = new QueryBuilder(
-        reportQuery,
-        req.query
-    );
-    
-    const reports = await reportQuery
-        .search(['title', 'description', 'status', 'reportType'])
-        .filter()
-        .sort()
-        .paginate()
-        .fields()
-        .modelQuery;
-
-    const meta = await new QueryBuilder(
-        Report.find(baseQuery),
-        req.query
-    ).countTotal();
-
-    if (!reports || reports.length === 0) {
-        throw new ApiError('No reports found', 404);
+    if (!rvId) rvId = selectedRvId;
+  
+    // Base filter
+    const filter = { user: userId, rvId };
+  
+    // Date range filter
+    if (from && to) {
+      filter.dateOfService = { $gte: new Date(from), $lte: new Date(to) };
     }
-
-    res.status(200).json({
+  
+    // Search
+    if (searchTerm) {
+      filter.reportTitle = { $regex: searchTerm, $options: "i" };
+    }
+  
+    // Pagination
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const skip = (page - 1) * limit;
+  
+    // Sorting
+    const sortOption = sort ? sort.split(",").join(" ") : "-createdAt";
+  
+    // Query
+    const [reports, total] = await Promise.all([
+      Report.find(filter)
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit)
+        .select("-__v"),
+      Report.countDocuments(filter),
+    ]);
+  
+    if (!reports.length) {
+      return res.status(200).json({
         success: true,
-        message: 'Reports retrieved successfully',
-        meta,
-        data: reports
+        message: "No reports found",
+        meta: { page, limit, total: 0, totalPage: 0 },
+        data: [],
+      });
+    }
+  
+    res.status(200).json({
+      success: true,
+      message: "Reports retrieved successfully",
+      meta: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+      data: reports,
     });
 });
 
@@ -101,37 +118,35 @@ exports.getReportById = asyncHandler(async (req, res) => {
 });
 
 exports.updateReport = asyncHandler(async (req, res) => {
-    const userId = req.user.id || req.user._id;
-    
-    const report = await Report.findOne({
-        _id: req.params.id,
-        user: userId
-    });
-    
-    if (!report) {
-        throw new ApiError('Report not found or access denied', 404);
-    }
+    const report = await Report.findById(req.params.id);
+    if (!report) throw new ApiError('Report not found', 404);
 
-    // Update report fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
-        if (key !== 'images') { // Don't override images from req.body
-            report[key] = req.body[key];
-        }
+        report[key] = req.body[key];
     });
 
-    // Handle image updates if new files are uploaded
-    if (req.files && req.files.length > 0) {
-        // Keep existing images and add new ones
-        const newImages = req.files.map(file => file.location);
-        report.images = [...(report.images || []), ...newImages];
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...report.images];
+        
+        // Update with new images
+        report.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await report.save();
+
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await report.save();
     }
 
-    await report.save();
-
-    res.status(200).json({
+    return res.status(200).json({
         success: true,
         message: 'Report updated successfully',
-        data: report
+        report
     });
 });
 

@@ -6,6 +6,7 @@ const getSelectedRvByUserId = require('../../../utils/currentRv')
 const QueryBuilder = require('../../../builder/queryBuilder')
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createAirCondition = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -70,7 +71,12 @@ exports.getAirConditions = asyncHandler(async (req, res) => {
     ).countTotal();
     
     if (!airConditions || airConditions.length === 0) {
-        throw new ApiError('AirConditions not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No airConditions found',
+            meta,
+            airConditions
+        });
     }
     
     return res.status(200).json({
@@ -94,9 +100,36 @@ exports.getAirConditionById = asyncHandler(async (req, res) => {
 
 
 // exports.updateAirCondition = asyncHandler(async (req, res) => {
-//     const userId = req.user.id || req.user._id;
-//     const airCondition = await AirCondition.findByIdAndUpdate(req.params.id, { ...req.body, user: userId }, { new: true });
+//     const airCondition = await AirCondition.findById(req.params.id);
 //     if (!airCondition) throw new ApiError('AirCondition not found', 404);
+
+//     Object.keys(req.body).forEach(key => {
+//         airCondition[key] = req.body[key];
+//     });
+
+//     await airCondition.save();
+
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = airCondition.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         airCondition.images = newImages;
+//     }
+
 //     return res.status(200).json({
 //         success: true,
 //         message: 'AirCondition updated successfully',
@@ -109,31 +142,26 @@ exports.updateAirCondition = asyncHandler(async (req, res) => {
     const airCondition = await AirCondition.findById(req.params.id);
     if (!airCondition) throw new ApiError('AirCondition not found', 404);
 
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         airCondition[key] = req.body[key];
     });
 
-    await airCondition.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...airCondition.images];
+        
+        // Update with new images
+        airCondition.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await airCondition.save();
 
-
-    if (req.files && req.files.length > 0) {
-        const oldImages = airCondition.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        airCondition.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await airCondition.save();
     }
 
     return res.status(200).json({
@@ -143,17 +171,6 @@ exports.updateAirCondition = asyncHandler(async (req, res) => {
     });
 });
 
-
-// exports.deleteAirCondition = asyncHandler(async (req, res) => {
-//     const userId = req.user.id || req.user._id;
-//     const airCondition = await AirCondition.findByIdAndDelete(req.params.id, { user: userId });
-//     if (!airCondition) throw new ApiError('AirCondition not found', 404);
-//     return res.status(200).json({
-//         success: true,
-//         message: 'AirCondition deleted successfully',
-//         airCondition
-//     });
-// });
 
 
 exports.deleteAirCondition = asyncHandler(async (req, res) => {

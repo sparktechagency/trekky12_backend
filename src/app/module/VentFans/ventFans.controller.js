@@ -8,6 +8,7 @@ const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createVentFans = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -66,7 +67,12 @@ exports.getVentFans = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!ventFans || ventFans.length === 0) {
-        throw new ApiError('Vent fans not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No vent fans found',
+            meta,
+            ventFans
+        });
     }
 
     return res.status(200).json({
@@ -87,36 +93,69 @@ exports.getVentFanById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateVentFan = asyncHandler(async (req, res) => {
+//     const ventFan = await VentFans.findById(req.params.id);
+//     if (!ventFan) throw new ApiError('Vent fan not found', 404);
+
+//     // Update vent fan fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         ventFan[key] = req.body[key];
+//     });
+
+//     await ventFan.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = ventFan.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         ventFan.images = newImages;
+//         await ventFan.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Vent fan updated successfully',
+//         ventFan
+//     });
+// });
+
 exports.updateVentFan = asyncHandler(async (req, res) => {
     const ventFan = await VentFans.findById(req.params.id);
     if (!ventFan) throw new ApiError('Vent fan not found', 404);
 
-    // Update vent fan fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         ventFan[key] = req.body[key];
     });
 
-    await ventFan.save();
-
-    if (req.files && req.files.length > 0) {
-        const oldImages = ventFan.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        ventFan.images = newImages;
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...ventFan.images];
+        
+        // Update with new images
+        ventFan.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
         await ventFan.save();
+
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await   ventFan.save();
     }
 
     return res.status(200).json({
@@ -125,6 +164,7 @@ exports.updateVentFan = asyncHandler(async (req, res) => {
         ventFan
     });
 });
+
 
 exports.deleteVentFan = asyncHandler(async (req, res) => {
     const ventFan = await deleteDocumentWithFiles(VentFans, req.params.id, "uploads");

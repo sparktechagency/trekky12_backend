@@ -8,6 +8,7 @@ const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages
 const getSelectedRvByUserId = require('../../../utils/currentRv')
 const deleteFile = require('../../../utils/unlinkFile');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 const uploadPath = path.join(__dirname, '../uploads');
 
@@ -71,7 +72,12 @@ exports.getDvd = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!dvds || dvds.length === 0) {
-        throw new ApiError('DVDs not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No DVDs found',
+            meta,
+            dvds
+        });
     }
 
     return res.status(200).json({
@@ -92,22 +98,55 @@ exports.getDvdById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateDvd = asyncHandler(async (req, res) => {
+//     const dvd = await Dvd.findById(req.params.id);
+//     if (!dvd) throw new ApiError('Dvd not found', 404);
+
+//     // Update dvd fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         dvd[key] = req.body[key];
+//     });
+
+//     await dvd.save();
+
+//     if (req.files && req.files.length > 0) {
+//         // For S3, we don't need to delete old files manually as they're managed by AWS
+//         // Just replace with new images
+//         const newImages = req.files.map(image => image.location);
+//         dvd.images = newImages;
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Dvd updated successfully',
+//         dvd
+//     });
+// });
+
 exports.updateDvd = asyncHandler(async (req, res) => {
     const dvd = await Dvd.findById(req.params.id);
     if (!dvd) throw new ApiError('Dvd not found', 404);
 
-    // Update dvd fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         dvd[key] = req.body[key];
     });
 
-    await dvd.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...dvd.images];
+        
+        // Update with new images
+        dvd.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await dvd.save();
 
-    if (req.files && req.files.length > 0) {
-        // For S3, we don't need to delete old files manually as they're managed by AWS
-        // Just replace with new images
-        const newImages = req.files.map(image => image.location);
-        dvd.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await dvd.save();
     }
 
     return res.status(200).json({

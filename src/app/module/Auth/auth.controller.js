@@ -1,5 +1,6 @@
 const asyncHandler = require('../../../utils/asyncHandler');
 const User = require('./../User/User');
+const Admin = require('./../Admin/Admin');
 const TempUser = require('./../TempUser/TempUser');
 const { ApiError } = require('../../../errors/errorHandler');
 const tokenService = require('../../../utils/tokenService');
@@ -140,7 +141,6 @@ exports.login = async (req, res, next) => {
                 email: user.email, 
                 rv: rvDetails ,
                 selectedRvId: user.selectedRvId
-                
             }
         });
     } catch (err) {
@@ -278,6 +278,32 @@ exports.resendVerificationCode = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: 'Verification code resent to your email.'
+        });
+    } catch (err) {
+        return next(err);
+    }
+};
+
+// ADMIN LOGIN
+exports.adminLogin = async (req, res, next) => {
+    const { email, password } = req.body;
+    try {
+        const admin = await Admin.findOne({ email }).select('+password');
+
+        if (!admin) throw new ApiError('Admin not found', 404);
+
+        const isMatch = await bcrypt.compare(password, admin.password);
+        if (!isMatch) throw new ApiError('Invalid email or password', 401);
+
+        const accessToken = tokenService.generateAccessToken({ id: admin._id, role: admin.role });
+        const refreshToken = tokenService.generateRefreshToken({ id: admin._id, role: admin.role });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            accessToken,
+            refreshToken,
+            admin: { id: admin._id, name: admin.name, email: admin.email },
         });
     } catch (err) {
         return next(err);

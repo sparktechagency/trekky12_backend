@@ -7,6 +7,7 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv')
 const deleteFile = require('../../../utils/unlinkFile');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 const uploadPath = path.join(__dirname, '../uploads');
 
@@ -66,7 +67,12 @@ exports.getWaterHeater = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!waterHeaters || waterHeaters.length === 0) {
-        throw new ApiError('WaterHeaters not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No water heaters found',
+            meta,
+            waterHeaters
+        });
     }
 
     return res.status(200).json({
@@ -90,36 +96,69 @@ exports.getWaterHeaterById = asyncHandler(async (req, res) => {
 
 
 
+// exports.updateWaterHeater = asyncHandler(async (req, res) => {
+//     const waterHeater = await WaterHeater.findById(req.params.id);
+//     if (!waterHeater) throw new ApiError('WaterHeater not found', 404);
+
+
+//     // Update waterHeater fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         waterHeater[key] = req.body[key];
+//     });
+
+//     await waterHeater.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = waterHeater.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         waterHeater.images = newImages;
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'WaterHeater updated successfully',
+//         waterHeater
+//     });
+// });
+
 exports.updateWaterHeater = asyncHandler(async (req, res) => {
     const waterHeater = await WaterHeater.findById(req.params.id);
     if (!waterHeater) throw new ApiError('WaterHeater not found', 404);
 
-
-    // Update waterHeater fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         waterHeater[key] = req.body[key];
     });
 
-    await waterHeater.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...waterHeater.images];
+        
+        // Update with new images
+        waterHeater.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await waterHeater.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = waterHeater.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        waterHeater.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await   waterHeater.save();
     }
 
     return res.status(200).json({
@@ -128,6 +167,7 @@ exports.updateWaterHeater = asyncHandler(async (req, res) => {
         waterHeater
     });
 });
+
 
 exports.deleteWaterHeater = asyncHandler(async (req, res) => {
     const waterHeater = await deleteDocumentWithFiles(WaterHeater, req.params.id, "uploads");

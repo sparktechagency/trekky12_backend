@@ -6,6 +6,9 @@ const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const User = require('../../module/User/User');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
+
+
 exports.createDishwasher = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
@@ -82,7 +85,12 @@ exports.getDishwashers = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!dishwashers || dishwashers.length === 0) {
-        throw new ApiError('No dishwashers found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No dishwashers found',
+            meta,
+            dishwashers
+        });
     }
 
     return res.status(200).json({
@@ -106,29 +114,62 @@ exports.getDishwasherById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateDishwasher = asyncHandler(async (req, res) => {
+//     const userId = req.user.id || req.user._id;
+//     const update = { ...req.body };
+
+//     if (req.files && req.files.length > 0) {
+//         // Get current dishwasher to delete old images
+//         const currentDishwasher = await Dishwasher.findById(req.params.id);
+//         if (currentDishwasher && currentDishwasher.images) {
+//             // Delete old images from storage if needed
+//             // This depends on your storage solution
+//         }
+
+//         // Set new images
+//         update.images = req.files.map(file => file.location);
+//     }
+
+//     const dishwasher = await Dishwasher.findOneAndUpdate(
+//         { _id: req.params.id, user: userId },
+//         update,
+//         { new: true, runValidators: true }
+//     );
+
+//     if (!dishwasher) throw new ApiError('Dishwasher not found', 404);
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'Dishwasher updated successfully',
+//         dishwasher
+//     });
+// });
+
 exports.updateDishwasher = asyncHandler(async (req, res) => {
-    const userId = req.user.id || req.user._id;
-    const update = { ...req.body };
-
-    if (req.files && req.files.length > 0) {
-        // Get current dishwasher to delete old images
-        const currentDishwasher = await Dishwasher.findById(req.params.id);
-        if (currentDishwasher && currentDishwasher.images) {
-            // Delete old images from storage if needed
-            // This depends on your storage solution
-        }
-
-        // Set new images
-        update.images = req.files.map(file => file.location);
-    }
-
-    const dishwasher = await Dishwasher.findOneAndUpdate(
-        { _id: req.params.id, user: userId },
-        update,
-        { new: true, runValidators: true }
-    );
-
+    const dishwasher = await Dishwasher.findById(req.params.id);
     if (!dishwasher) throw new ApiError('Dishwasher not found', 404);
+
+    // 1. Update fields from req.body
+    Object.keys(req.body).forEach(key => {
+        dishwasher[key] = req.body[key];
+    });
+
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...dishwasher.images];
+        
+        // Update with new images
+        dishwasher.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await dishwasher.save();
+
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await dishwasher.save();
+    }
 
     return res.status(200).json({
         success: true,

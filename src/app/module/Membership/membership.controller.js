@@ -9,6 +9,7 @@ const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createMembership = asyncHandler(async (req, res) => {
   const userId = req.user.id || req.user._id;
@@ -59,7 +60,7 @@ exports.getMemberships = asyncHandler(async (req, res) => {
   )
   
   const memberships = await membershipsQuery
-    .search(['name', 'organization', 'membershipType'])
+    .search(['name'])
     .filter()
     .sort()
     .paginate()
@@ -72,7 +73,12 @@ exports.getMemberships = asyncHandler(async (req, res) => {
   ).countTotal();
 
   if (!memberships || memberships.length === 0) {
-    throw new ApiError('No memberships found', 404);
+    return res.status(200).json({
+      success: true,
+      message: 'No memberships found',
+      meta,
+      memberships
+    });
   }
 
   return res.status(200).json({
@@ -93,43 +99,76 @@ exports.getMembershipById = asyncHandler(async (req, res) => {
   });
 });
 
+// exports.updateMembership = asyncHandler(async (req, res) => {
+//   const membership = await Membership.findById(req.params.id);
+//   if (!membership) throw new ApiError('Membership not found', 404);
+
+//   // Update membership fields from req.body
+//   Object.keys(req.body).forEach(key => {
+//     membership[key] = req.body[key];
+//   });
+
+//   await membership.save();
+
+//   if (req.files && req.files.length > 0) {
+//     const oldImages = membership.images;
+
+//     // Delete old images from disk
+//     oldImages.forEach(image => {
+//       const path = image.split('/').pop();
+//       try {
+//         fs.unlinkSync(`${uploadPath}/${path}`);
+//       } catch (err) {
+//         if (err.code !== 'ENOENT') {
+//           console.error(err);
+//         }
+//       }
+//     });
+
+//     // Set only new images
+//     const newImages = req.files.map(image => image.location);
+//     membership.images = newImages;
+//     await membership.save();
+//   }
+
+//   return res.status(200).json({
+//     success: true,
+//     message: 'Membership updated successfully',
+//     membership
+//   });
+// });
+
 exports.updateMembership = asyncHandler(async (req, res) => {
-  const membership = await Membership.findById(req.params.id);
-  if (!membership) throw new ApiError('Membership not found', 404);
+    const membership = await Membership.findById(req.params.id);
+    if (!membership) throw new ApiError('Membership not found', 404);
 
-  // Update membership fields from req.body
-  Object.keys(req.body).forEach(key => {
-    membership[key] = req.body[key];
-  });
-
-  await membership.save();
-
-  if (req.files && req.files.length > 0) {
-    const oldImages = membership.images;
-
-    // Delete old images from disk
-    oldImages.forEach(image => {
-      const path = image.split('/').pop();
-      try {
-        fs.unlinkSync(`${uploadPath}/${path}`);
-      } catch (err) {
-        if (err.code !== 'ENOENT') {
-          console.error(err);
-        }
-      }
+    // 1. Update fields from req.body
+    Object.keys(req.body).forEach(key => {
+        membership[key] = req.body[key];
     });
 
-    // Set only new images
-    const newImages = req.files.map(image => image.location);
-    membership.images = newImages;
-    await membership.save();
-  }
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...membership.images];
+        
+        // Update with new images
+        membership.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await membership.save();
 
-  return res.status(200).json({
-    success: true,
-    message: 'Membership updated successfully',
-    membership
-  });
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await membership.save();
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: 'Membership updated successfully',
+        membership
+    });
 });
 
 exports.deleteMembership = asyncHandler(async (req, res) => {

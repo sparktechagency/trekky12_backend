@@ -8,6 +8,7 @@ const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const deleteFile = require('../../../utils/unlinkFile');
 const uploadPath = path.join(__dirname, '../uploads');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createTv = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -67,7 +68,12 @@ exports.getTvs = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!tvs || tvs.length === 0) {
-        throw new ApiError('TVs not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No TVs found',
+            meta,
+            tvs
+        });
     }
 
     return res.status(200).json({
@@ -88,36 +94,69 @@ exports.getTvById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateTv = asyncHandler(async (req, res) => {
+//     const tv = await Tv.findById(req.params.id);
+//     if (!tv) throw new ApiError('TV not found', 404);
+
+//     // Update TV fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         tv[key] = req.body[key];
+//     });
+
+//     await tv.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = tv.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         tv.images = newImages;
+//         await tv.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'TV updated successfully',
+//         tv
+//     });
+// });
+
 exports.updateTv = asyncHandler(async (req, res) => {
     const tv = await Tv.findById(req.params.id);
     if (!tv) throw new ApiError('TV not found', 404);
 
-    // Update TV fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         tv[key] = req.body[key];
     });
 
-    await tv.save();
-
-    if (req.files && req.files.length > 0) {
-        const oldImages = tv.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        tv.images = newImages;
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...tv.images];
+        
+        // Update with new images
+        tv.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
         await tv.save();
+
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
+        await   tv.save();
     }
 
     return res.status(200).json({
@@ -126,6 +165,7 @@ exports.updateTv = asyncHandler(async (req, res) => {
         tv
     });
 });
+
 
 exports.deleteTv = asyncHandler(async (req, res) => {
     const tv = await deleteDocumentWithFiles(Tv, req.params.id, "uploads");

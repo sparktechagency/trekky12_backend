@@ -4,7 +4,7 @@ const { ApiError } = require('../../../errors/errorHandler');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const User = require('../../module/User/User');
 const checkValidRv = require('../../../utils/checkValidRv');
-
+const QueryBuilder = require('../../../builder/queryBuilder');
 // @desc    Create a new maintenance schedule
 // @route   POST /api/v1/maintenance-schedule
 // @access  Private
@@ -46,6 +46,42 @@ exports.createMaintenanceSchedule = asyncHandler(async (req, res) => {
 // @desc    Get all maintenance schedules with filtering
 // @route   GET /api/v1/maintenance-schedule
 // @access  Private
+// exports.getMaintenanceSchedule = asyncHandler(async (req, res) => {
+//     const userId = req.user.id || req.user._id;
+//     const selectedRvId = await getSelectedRvByUserId(userId);
+    
+//     let rvId = req.query.rvId;
+//     if (!rvId && !selectedRvId) {
+//         throw new ApiError('No RV selected. Please select an RV first.', 400);
+//     }
+//     if (!rvId) rvId = selectedRvId;
+
+//     // Verify the user has access to the specified RV
+//     const hasAccess = await checkRvOwnership(userId, rvId);
+//     if (!hasAccess) {
+//         throw new ApiError('You do not have permission to view maintenance for this RV', 403);
+//     }
+    
+//     const maintenanceSchedules = await MaintenanceSchedule.find({
+//         user: userId,
+//         rvId
+//     });
+
+//     if (!maintenanceSchedules || maintenanceSchedules.length === 0) {
+//         return res.status(200).json({
+//             success: true,
+//             message: 'No maintenance schedules found',
+//             data: maintenanceSchedules
+//         });
+//     }
+
+//     res.status(200).json({
+//         success: true,
+//         message: 'Maintenance schedules retrieved successfully',
+//         data: maintenanceSchedules
+//     });
+// });
+
 exports.getMaintenanceSchedule = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
@@ -62,15 +98,59 @@ exports.getMaintenanceSchedule = asyncHandler(async (req, res) => {
         throw new ApiError('You do not have permission to view maintenance for this RV', 403);
     }
     
-    const maintenanceSchedules = await MaintenanceSchedule.find({
-        user: userId,
-        rvId
-    });
+    // Add rvId to query for filtering
+    req.query.rvId = rvId;
+    
+    // Create base query with user filter
+    const baseQuery = { user: userId, rvId };
+    
+    // Initialize QueryBuilder
+    const maintenanceQuery = new QueryBuilder(
+        MaintenanceSchedule.find(baseQuery),
+        req.query
+    );
+    
+    // Apply search, filter, sort, pagination
+    const maintenanceSchedules = await maintenanceQuery
+        .search(['title', 'description', 'status', 'maintenanceType'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields()
+        .modelQuery;
+    
+    // Get total count for pagination
+    const total = await new QueryBuilder(
+        MaintenanceSchedule.find(baseQuery),
+        req.query
+    ).countTotal();
+    
+    // Calculate pagination metadata
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const totalPages = Math.ceil(total / limit);
+
+    const meta = {
+        page,
+        limit,
+        total,
+        totalPages
+    };
+
+    if (!maintenanceSchedules || maintenanceSchedules.length === 0) {
+        return res.status(200).json({
+            success: true,
+            message: 'No maintenance schedules found',
+            data: [],
+            meta
+        });
+    }
 
     res.status(200).json({
         success: true,
         message: 'Maintenance schedules retrieved successfully',
-        data: maintenanceSchedules
+        data: maintenanceSchedules,
+        meta
     });
 });
 

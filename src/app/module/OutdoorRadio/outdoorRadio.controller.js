@@ -7,6 +7,7 @@ const QueryBuilder = require('../../../builder/queryBuilder');
 const deleteDocumentWithFiles = require('../../../utils/deleteDocumentWithImages');
 const getSelectedRvByUserId = require('../../../utils/currentRv');
 const checkValidRv = require('../../../utils/checkValidRv');
+const deleteS3Objects = require('../../../utils/deleteS3ObjectsImage');
 
 exports.createOutdoorRadio = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
@@ -71,7 +72,12 @@ exports.getOutdoorRadio = asyncHandler(async (req, res) => {
     ).countTotal();
 
     if (!outdoorRadios || outdoorRadios.length === 0) {
-        throw new ApiError('OutdoorRadios not found', 404);
+        return res.status(200).json({
+            success: true,
+            message: 'No outdoorRadios found',
+            meta,
+            outdoorRadios
+        });
     }
 
     return res.status(200).json({
@@ -92,35 +98,68 @@ exports.getOutdoorRadioById = asyncHandler(async (req, res) => {
     });
 });
 
+// exports.updateOutdoorRadio = asyncHandler(async (req, res) => {
+//     const outdoorRadio = await OutdoorRadio.findById(req.params.id);
+//     if (!outdoorRadio) throw new ApiError('OutdoorRadio not found', 404);
+
+//     // Update outdoorRadio fields from req.body
+//     Object.keys(req.body).forEach(key => {
+//         outdoorRadio[key] = req.body[key];
+//     });
+
+//     await outdoorRadio.save();
+
+//     if (req.files && req.files.length > 0) {
+//         const oldImages = outdoorRadio.images;
+
+//         // Delete old images from disk
+//         oldImages.forEach(image => {
+//             const path = image.split('/').pop();
+//             try {
+//                 fs.unlinkSync(`${uploadPath}/${path}`);
+//             } catch (err) {
+//                 if (err.code !== 'ENOENT') {
+//                     console.error(err);
+//                 }
+//             }
+//         });
+
+//         // Set only new images
+//         const newImages = req.files.map(image => image.location);
+//         outdoorRadio.images = newImages;
+//         await outdoorRadio.save();
+//     }
+
+//     return res.status(200).json({
+//         success: true,
+//         message: 'OutdoorRadio updated successfully',
+//         outdoorRadio
+//     });
+// });
+
 exports.updateOutdoorRadio = asyncHandler(async (req, res) => {
     const outdoorRadio = await OutdoorRadio.findById(req.params.id);
     if (!outdoorRadio) throw new ApiError('OutdoorRadio not found', 404);
 
-    // Update outdoorRadio fields from req.body
+    // 1. Update fields from req.body
     Object.keys(req.body).forEach(key => {
         outdoorRadio[key] = req.body[key];
     });
 
-    await outdoorRadio.save();
+    // 2. Handle file uploads if any
+    if (req.files?.length > 0) {
+        const oldImages = [...outdoorRadio.images];
+        
+        // Update with new images
+        outdoorRadio.images = req.files.map(file => file.location);
+        
+        // Save the document (only once)
+        await outdoorRadio.save();
 
-    if (req.files && req.files.length > 0) {
-        const oldImages = outdoorRadio.images;
-
-        // Delete old images from disk
-        oldImages.forEach(image => {
-            const path = image.split('/').pop();
-            try {
-                fs.unlinkSync(`${uploadPath}/${path}`);
-            } catch (err) {
-                if (err.code !== 'ENOENT') {
-                    console.error(err);
-                }
-            }
-        });
-
-        // Set only new images
-        const newImages = req.files.map(image => image.location);
-        outdoorRadio.images = newImages;
+        // Delete old images from S3
+        await deleteS3Objects(oldImages);
+    } else {
+        // If no files, just save the document
         await outdoorRadio.save();
     }
 
@@ -130,6 +169,7 @@ exports.updateOutdoorRadio = asyncHandler(async (req, res) => {
         outdoorRadio
     });
 });
+
 
 exports.deleteOutdoorRadio = asyncHandler(async (req, res) => {
     const outdoorRadio = await deleteDocumentWithFiles(OutdoorRadio, req.params.id, "uploads");
