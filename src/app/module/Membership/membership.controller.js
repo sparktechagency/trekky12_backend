@@ -77,7 +77,7 @@ exports.getMemberships = asyncHandler(async (req, res) => {
       success: true,
       message: 'No memberships found',
       meta,
-      memberships
+      data: []
     });
   }
 
@@ -85,7 +85,7 @@ exports.getMemberships = asyncHandler(async (req, res) => {
     success: true,
     message: 'Memberships retrieved successfully',
     meta,
-    memberships
+    data: memberships
   });
 });
 
@@ -95,7 +95,7 @@ exports.getMembershipById = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: 'Membership retrieved successfully',
-    membership
+    data: membership
   });
 });
 

@@ -70,7 +70,7 @@ exports.getWaterPump = asyncHandler(async (req, res) => {
             success: true,
             message: 'No water pumps found',
             meta,
-            waterPump
+            data: waterPump
         });
     }
 
@@ -78,7 +78,7 @@ exports.getWaterPump = asyncHandler(async (req, res) => {
         success: true,
         message: 'WaterPump retrieved successfully',
         meta,
-        waterPump
+        data: waterPump
     });
 });
 
@@ -88,7 +88,7 @@ exports.getWaterPumpById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'WaterPump retrieved successfully',
-        waterPump
+        data: waterPump
     });
 });
 

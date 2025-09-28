@@ -71,7 +71,7 @@ exports.getVentFans = asyncHandler(async (req, res) => {
             success: true,
             message: 'No vent fans found',
             meta,
-            ventFans
+            data: []
         });
     }
 
@@ -79,7 +79,7 @@ exports.getVentFans = asyncHandler(async (req, res) => {
         success: true,
         message: 'Vent fans retrieved successfully',
         meta,
-        ventFans
+        data: ventFans
     });
 });
 
@@ -89,7 +89,7 @@ exports.getVentFanById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Vent fan retrieved successfully',
-        ventFan
+        data: ventFan
     });
 });
 

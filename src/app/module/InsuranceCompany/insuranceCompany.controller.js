@@ -246,7 +246,7 @@ exports.getInsuranceCompanies = asyncHandler(async (req, res) => {
             success: true,
             message: 'No insurance companies found',
             meta,
-            insuranceCompanies
+            data: []
         });
     }
 
@@ -254,7 +254,7 @@ exports.getInsuranceCompanies = asyncHandler(async (req, res) => {
         success: true,
         message: 'Insurance companies retrieved successfully',
         meta,
-        insuranceCompanies
+        data: insuranceCompanies
     });
 });
 
@@ -265,13 +265,13 @@ exports.getInsuranceCompanyById = asyncHandler(async (req, res) => {
     if (!insuranceCompany) return res.status(200).json({
         success: true,
         message: 'Insurance company not found',
-        insuranceCompany
+        data: insuranceCompany
     });
 
     return res.status(200).json({
         success: true,
         message: 'Insurance company retrieved successfully',
-        insuranceCompany
+        data: insuranceCompany
     });
 });
 

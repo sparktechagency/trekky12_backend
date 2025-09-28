@@ -71,7 +71,7 @@ exports.getWifiRouters = asyncHandler(async (req, res) => {
             success: true,
             message: 'No WiFi routers found',
             meta,
-            wifiRouters
+            data: wifiRouters
         });
     }
 
@@ -79,7 +79,7 @@ exports.getWifiRouters = asyncHandler(async (req, res) => {
         success: true,
         message: 'WiFi routers retrieved successfully',
         meta,
-        wifiRouters
+        data: wifiRouters
     });
 });
 
@@ -89,7 +89,7 @@ exports.getWifiRouterById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'WiFi router retrieved successfully',
-        wifiRouter
+        data: wifiRouter
     });
 });
 

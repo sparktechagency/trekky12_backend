@@ -77,7 +77,7 @@ exports.getExpenses = asyncHandler(async (req, res) => {
             success: true,
             message: 'No expenses found',
             meta,
-            data: expenses
+            data: []
         });
     }
 

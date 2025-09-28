@@ -77,7 +77,7 @@ exports.getInternetSatellites = asyncHandler(async (req, res) => {
             success: true,
             message: 'No internet satellite devices found',
             meta,
-            internetSatellites
+            data: []
         });
     }
 
@@ -85,7 +85,7 @@ exports.getInternetSatellites = asyncHandler(async (req, res) => {
         success: true,
         message: 'Internet satellite devices retrieved successfully',
         meta,
-        internetSatellites
+        data: internetSatellites
     });
 });
 
@@ -94,7 +94,7 @@ exports.getInternetSatelliteById = asyncHandler(async (req, res) => {
     if (!internetSatellite) return res.status(200).json({
         success: true,
         message: 'Internet satellite device not found',
-        internetSatellite
+        data: internetSatellite
     });
     return res.status(200).json({
         success: true,

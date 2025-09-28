@@ -89,7 +89,7 @@ exports.getDishwashers = asyncHandler(async (req, res) => {
             success: true,
             message: 'No dishwashers found',
             meta,
-            dishwashers
+            data: []
         });
     }
 
@@ -97,7 +97,7 @@ exports.getDishwashers = asyncHandler(async (req, res) => {
         success: true,
         message: 'Dishwashers retrieved successfully',
         meta,
-        dishwashers
+        data: dishwashers
     });
 });
 
@@ -110,7 +110,7 @@ exports.getDishwasherById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Dishwasher retrieved successfully',
-        dishwasher
+        data: dishwasher
     });
 });
 

@@ -76,7 +76,7 @@ exports.getNewRepairs = asyncHandler(async (req, res) => {
             success: true,
             message: 'No repair requests found',
             meta,
-            data: newRepairs
+            data: []
         });
     }
 

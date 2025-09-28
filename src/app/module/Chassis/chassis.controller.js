@@ -143,6 +143,14 @@ exports.getChassis = asyncHandler(async (req, res) => {
         _id: chassisId 
     });
 
+    if(!chassis) {
+        return res.status(200).json({
+            success: true,
+            message: 'No chassis found',
+            data: []
+        });
+    }
+
     res.status(200).json({
         success: true,
         message: 'Chassis retrieved successfully',

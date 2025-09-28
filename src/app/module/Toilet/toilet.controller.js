@@ -72,7 +72,7 @@ exports.getToilets = asyncHandler(async (req, res) => {
             success: true,
             message: 'No toilets found',
             meta,
-            toilets
+            data: []
         });
     }
 
@@ -80,7 +80,7 @@ exports.getToilets = asyncHandler(async (req, res) => {
         success: true,
         message: 'Toilets retrieved successfully',
         meta,
-        toilets
+        data: toilets
     });
 });
 
@@ -90,7 +90,7 @@ exports.getToiletById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Toilet retrieved successfully',
-        toilet
+        data: toilet
     });
 });
 

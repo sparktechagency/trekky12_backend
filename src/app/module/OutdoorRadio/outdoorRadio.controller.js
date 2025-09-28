@@ -76,7 +76,7 @@ exports.getOutdoorRadio = asyncHandler(async (req, res) => {
             success: true,
             message: 'No outdoorRadios found',
             meta,
-            outdoorRadios
+            data: []
         });
     }
 
@@ -84,7 +84,7 @@ exports.getOutdoorRadio = asyncHandler(async (req, res) => {
         success: true,
         message: 'OutdoorRadios retrieved successfully',
         meta,
-        outdoorRadios
+        data: outdoorRadios
     });
 });
 
@@ -94,7 +94,7 @@ exports.getOutdoorRadioById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'OutdoorRadio retrieved successfully',
-        outdoorRadio
+        data: outdoorRadio
     });
 });
 

@@ -78,7 +78,7 @@ exports.getGps = asyncHandler(async (req, res) => {
             success: true,
             message: 'No GPS devices found',
             meta,
-            gps
+            data: []
         });
     }
 
@@ -86,7 +86,7 @@ exports.getGps = asyncHandler(async (req, res) => {
         success: true,
         message: 'GPS devices retrieved successfully',
         meta,
-        gps
+        data: gps
     });
 });
 
@@ -96,7 +96,7 @@ exports.getGpsById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'GPS device retrieved successfully',
-        gps
+        data: gps
     });
 });
 

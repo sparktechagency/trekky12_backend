@@ -71,7 +71,7 @@ exports.getWasher = asyncHandler(async (req, res) => {
             success: true,
             message: 'No washers found',
             meta,
-            washers
+            data: []
         });
     }
 
@@ -79,7 +79,7 @@ exports.getWasher = asyncHandler(async (req, res) => {
         success: true,
         message: 'Washer retrieved successfully',
         meta,
-        washers
+        data: washers
     });
 });
 
@@ -90,7 +90,7 @@ exports.getWasherById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Washer retrieved successfully',
-        washer
+        data: washer
     });
 });
 

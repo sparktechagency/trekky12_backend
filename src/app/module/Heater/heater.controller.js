@@ -78,7 +78,7 @@ exports.getHeaters = asyncHandler(async (req, res) => {
             success: true,
             message: 'No heaters found',
             meta,
-            heaters
+            data: []
         });
     }
 
@@ -86,7 +86,7 @@ exports.getHeaters = asyncHandler(async (req, res) => {
         success: true,
         message: 'Heaters retrieved successfully',
         meta,
-        heaters
+        data: heaters
     });
 });
 
@@ -96,7 +96,7 @@ exports.getHeaterById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Heater retrieved successfully',
-        heater
+        data: heater
     });
 });
 

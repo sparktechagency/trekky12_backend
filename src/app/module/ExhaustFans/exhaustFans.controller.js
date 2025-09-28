@@ -78,7 +78,7 @@ exports.getExhaustFans = asyncHandler(async (req, res) => {
             success: true,
             message: 'No ExhaustFans found',
             meta,
-            exhaustFans: exhaustFansList
+            data: []
         });
     }
 
@@ -86,7 +86,7 @@ exports.getExhaustFans = asyncHandler(async (req, res) => {
         success: true,
         message: 'ExhaustFans retrieved successfully',
         meta,
-        exhaustFans: exhaustFansList
+        data: exhaustFansList
     });
 });
 
@@ -96,7 +96,7 @@ exports.getExhaustFansById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'ExhaustFans retrieved successfully',
-        exhaustFans
+        data: exhaustFans
     });
 });
 

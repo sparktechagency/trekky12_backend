@@ -72,7 +72,7 @@ exports.getTvs = asyncHandler(async (req, res) => {
             success: true,
             message: 'No TVs found',
             meta,
-            tvs
+            data: tvs
         });
     }
 
@@ -80,7 +80,7 @@ exports.getTvs = asyncHandler(async (req, res) => {
         success: true,
         message: 'TVs retrieved successfully',
         meta,
-        tvs
+        data: tvs
     });
 });
 
@@ -90,7 +90,7 @@ exports.getTvById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'TV retrieved successfully',
-        tv
+        data: tv
     });
 });
 

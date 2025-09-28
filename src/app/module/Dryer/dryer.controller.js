@@ -79,7 +79,7 @@ exports.getDryers = asyncHandler(async (req, res) => {
             success: true,
             message: 'No Dryers found',
             meta,
-            dryers
+            data: []
         });
     }
 
@@ -87,7 +87,7 @@ exports.getDryers = asyncHandler(async (req, res) => {
         success: true,
         message: 'Dryers retrieved successfully',
         meta,
-        dryers
+        data: dryers
     });
 });
 
@@ -97,7 +97,7 @@ exports.getDryerById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Dryer retrieved successfully',
-        dryer
+        data: dryer
     });
 });
 

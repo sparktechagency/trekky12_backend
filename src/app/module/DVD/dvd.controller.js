@@ -76,7 +76,7 @@ exports.getDvd = asyncHandler(async (req, res) => {
             success: true,
             message: 'No DVDs found',
             meta,
-            dvds
+            data: []
         });
     }
 
@@ -84,7 +84,7 @@ exports.getDvd = asyncHandler(async (req, res) => {
         success: true,
         message: 'DVD retrieved successfully',
         meta,
-        dvds
+        data: dvds
     });
 });
 
@@ -94,7 +94,7 @@ exports.getDvdById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Dvd retrieved successfully',
-        dvd
+        data: dvd
     });
 });
 

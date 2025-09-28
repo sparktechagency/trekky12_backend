@@ -71,7 +71,7 @@ exports.getWaterHeater = asyncHandler(async (req, res) => {
             success: true,
             message: 'No water heaters found',
             meta,
-            waterHeaters
+            data: waterHeaters
         });
     }
 
@@ -79,7 +79,7 @@ exports.getWaterHeater = asyncHandler(async (req, res) => {
         success: true,
         message: 'WaterHeater retrieved successfully',
         meta,
-        waterHeaters
+        data: waterHeaters
     });
 });
 
@@ -90,7 +90,7 @@ exports.getWaterHeaterById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'waterHeater retrieved successfully',
-        waterHeater
+        data: waterHeater
     });
 });
 

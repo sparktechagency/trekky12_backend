@@ -83,6 +83,7 @@ app.use('/api/maintenance-schedule', require('./app/module/MaintenanceSchedule/m
 app.use('/api/dashboard', require('./app/module/Dashboard/dashboard.router'));
 app.use('/api/manage', require('./app/module/Manage/manage.router'));
 app.use('/api/admin', require('./app/module/Admin/admin.router'));
+app.use('/api/trips', require('./app/module/Trip/trip.router'));
 
 app.get('/', (req, res) => {
   res.send("All ok")

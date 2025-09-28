@@ -16,7 +16,7 @@
 
 //     const selectedRvId = await getSelectedRvByUserId(userId);
 //     const targetRvId = rvId || selectedRvId;
-    
+
 //     if (!targetRvId) {
 //         throw new ApiError("No RV selected. Please select an RV first.", 400);
 //     }
@@ -41,7 +41,7 @@
 // exports.getAllChecklists = asyncHandler(async (req, res) => {
 //     const userId = req.user.id || req.user._id;
 //     const selectedRvId = await getSelectedRvByUserId(userId);
-    
+
 //     if (!selectedRvId) {
 //         throw new ApiError("No RV selected. Please select an RV first.", 400);
 //     }
@@ -107,7 +107,7 @@
 // // @access  Private
 // exports.deleteChecklist = asyncHandler(async (req, res) => {
 //     const userId = req.user.id || req.user._id;
-    
+
 //     const checklist = await Checklist.findOneAndDelete({
 //         _id: req.params.id,
 //         user: userId
@@ -226,6 +226,7 @@ const Checklist = require("./Checklist");
 const asyncHandler = require("../../../utils/asyncHandler");
 const { ApiError } = require("../../../errors/errorHandler");
 const getSelectedRvByUserId = require("../../../utils/currentRv");
+const QueryBuilder = require("../../../builder/queryBuilder");
 
 // @desc    Create a new checklist
 // @route   POST /api/v1/checklists
@@ -236,12 +237,12 @@ exports.createChecklist = asyncHandler(async (req, res) => {
 
     const selectedRvId = await getSelectedRvByUserId(userId);
     const targetRvId = rvId || selectedRvId;
-    
+
     if (!targetRvId) {
         throw new ApiError("No RV selected. Please select an RV first.", 400);
     }
 
-    const checklist = await Checklist.create({ 
+    const checklist = await Checklist.create({
         title,
         rvId: targetRvId,
         user: userId,
@@ -255,25 +256,52 @@ exports.createChecklist = asyncHandler(async (req, res) => {
     });
 });
 
-// @desc    Get all checklists for the current RV
+// @desc    Get all checklists for the current RV with pagination
 // @route   GET /api/v1/checklists
 // @access  Private
 exports.getAllChecklists = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    
+
     if (!selectedRvId) {
         throw new ApiError("No RV selected. Please select an RV first.", 400);
     }
 
-    const checklists = await Checklist.find({ 
+    const baseQuery = {
         user: userId,
         rvId: selectedRvId
-    }).sort({ createdAt: -1 });
+    };
+
+    const checklistQuery = new QueryBuilder(
+        Checklist.find(baseQuery),
+        req.query
+    )
+        .search(['title', 'status'])  // Add searchable fields
+        .filter()
+        .sort()
+        .paginate()
+        .fields();
+
+    const checklists = await checklistQuery.modelQuery;
+
+    const meta = await new QueryBuilder(
+        Checklist.find(baseQuery),
+        req.query
+    ).countTotal();
+
+    if (!checklists || checklists.length === 0) {
+        return res.status(200).json({
+            success: true,
+            message: 'No checklists found',
+            meta,
+            data: checklists
+        });
+    }
 
     res.status(200).json({
         success: true,
-        count: checklists.length,
+        message: 'Checklists retrieved successfully',
+        meta,
         data: checklists
     });
 });
@@ -329,11 +357,13 @@ exports.updateChecklist = asyncHandler(async (req, res) => {
         itemOperations.forEach(operation => {
             switch (operation.action) {
                 case 'add':
-                    if (operation.item) {
-                        checklist.items.push(operation.item);
+                    // if (operation.item) {
+                    //     checklist.items.push(operation.item);
+                    // }
+                    if (operation.items && Array.isArray(operation.items)) {
+                        checklist.items.push(...operation.items);
                     }
                     break;
-                    
                 case 'update':
                     if (operation.itemId && operation.updates) {
                         const itemIndex = checklist.items.findIndex(
@@ -344,7 +374,6 @@ exports.updateChecklist = asyncHandler(async (req, res) => {
                         }
                     }
                     break;
-                    
                 case 'remove':
                     if (operation.itemId) {
                         checklist.items = checklist.items.filter(
@@ -352,7 +381,6 @@ exports.updateChecklist = asyncHandler(async (req, res) => {
                         );
                     }
                     break;
-                    
                 case 'reorder':
                     if (operation.itemIds && Array.isArray(operation.itemIds)) {
                         // Create a map for quick lookup
@@ -360,7 +388,7 @@ exports.updateChecklist = asyncHandler(async (req, res) => {
                         checklist.items.forEach(item => {
                             itemMap.set(item._id.toString(), item);
                         });
-                        
+
                         // Reorder items based on the provided array of IDs
                         checklist.items = operation.itemIds.map(id => itemMap.get(id)).filter(Boolean);
                     }
@@ -383,7 +411,7 @@ exports.updateChecklist = asyncHandler(async (req, res) => {
 // @access  Private
 exports.deleteChecklist = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
-    
+
     const checklist = await Checklist.findOneAndDelete({
         _id: req.params.id,
         user: userId
@@ -430,7 +458,7 @@ exports.bulkUpdateItems = asyncHandler(async (req, res) => {
                         checklist.items.push(operation.item);
                     }
                     break;
-                    
+
                 case 'update':
                     if (operation.itemId && operation.updates) {
                         const itemIndex = checklist.items.findIndex(
@@ -441,7 +469,7 @@ exports.bulkUpdateItems = asyncHandler(async (req, res) => {
                         }
                     }
                     break;
-                    
+
                 case 'remove':
                     if (operation.itemId) {
                         checklist.items = checklist.items.filter(
@@ -449,14 +477,14 @@ exports.bulkUpdateItems = asyncHandler(async (req, res) => {
                         );
                     }
                     break;
-                    
+
                 case 'reorder':
                     if (operation.itemIds && Array.isArray(operation.itemIds)) {
                         const itemMap = new Map();
                         checklist.items.forEach(item => {
                             itemMap.set(item._id.toString(), item);
                         });
-                        
+
                         checklist.items = operation.itemIds.map(id => itemMap.get(id)).filter(Boolean);
                     }
                     break;

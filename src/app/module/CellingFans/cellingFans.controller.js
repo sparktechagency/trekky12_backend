@@ -78,7 +78,7 @@ exports.getCellingFans = asyncHandler(async (req, res) => {
             success: true,
             message: 'No cellingFans found',
             meta,
-            cellingFans
+            data:cellingFans
         });
     }
 
@@ -86,7 +86,7 @@ exports.getCellingFans = asyncHandler(async (req, res) => {
         success: true,
         message: 'CellingFans retrieved successfully',
         meta,
-        cellingFans
+        data: cellingFans
     });
 });
 
@@ -96,7 +96,7 @@ exports.getCellingFansById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'CellingFans retrieved successfully',
-        cellingFans
+        data: cellingFans
     });
 });
 

@@ -71,7 +71,7 @@ exports.getSurroundSounds = asyncHandler(async (req, res) => {
             success: true,
             message: 'No surround sound systems found',
             meta,
-            surroundSounds
+            data: []
         });
     }
 
@@ -79,7 +79,7 @@ exports.getSurroundSounds = asyncHandler(async (req, res) => {
         success: true,
         message: 'Surround sound systems retrieved successfully',
         meta,
-        surroundSounds
+        data: surroundSounds
     });
 });
 
@@ -89,7 +89,7 @@ exports.getSurroundSoundById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Surround sound system retrieved successfully',
-        surroundSound
+        data: surroundSound
     });
 });
 

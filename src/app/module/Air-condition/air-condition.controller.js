@@ -75,7 +75,7 @@ exports.getAirConditions = asyncHandler(async (req, res) => {
             success: true,
             message: 'No airConditions found',
             meta,
-            airConditions
+            data: airConditions
         });
     }
     
@@ -83,7 +83,7 @@ exports.getAirConditions = asyncHandler(async (req, res) => {
         success: true,
         message: 'AirConditions retrieved successfully',
         meta,
-        airConditions
+        data: airConditions
     });
 });
 
@@ -94,7 +94,7 @@ exports.getAirConditionById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'AirCondition retrieved successfully',
-        airCondition
+        data: airCondition
     });
 });
 

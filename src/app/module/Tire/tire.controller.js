@@ -72,7 +72,7 @@ exports.getTire = asyncHandler(async (req, res) => {
             success: true,
             message: 'No tires found',
             meta,
-            tires
+            data: []
         });
     }
 
@@ -80,7 +80,7 @@ exports.getTire = asyncHandler(async (req, res) => {
         success: true,
         message: 'Tire retrieved successfully',
         meta,
-        tires
+        data: tires
     });
 });
 
@@ -90,7 +90,7 @@ exports.getTireById = asyncHandler(async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Tire retrieved successfully',
-        tire
+        data: tire
     });
 });
 
