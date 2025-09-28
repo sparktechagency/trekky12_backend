@@ -11,7 +11,7 @@ const checkValidRv = require('../../../utils/checkValidRv');
 exports.createChassis = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    
+
     // Use provided rvId or fallback to selected RV
     let rvId = req.body.rvId;
     if (!rvId && !selectedRvId) {
@@ -26,10 +26,10 @@ exports.createChassis = asyncHandler(async (req, res) => {
     }
 
     // Create the chassis
-    const chassis = await Chassis.create({ 
-        ...req.body, 
-        user: userId, 
-        rvId 
+    const chassis = await Chassis.create({
+        ...req.body,
+        user: userId,
+        rvId
     });
 
     // Update the RV with the new chassis ID (maintaining existing logic)
@@ -94,9 +94,9 @@ exports.createOrUpdateChassis = asyncHandler(async (req, res) => {
     }
 
     // Create chassis
-    const chassis = await Chassis.create({ 
-        ...req.body, 
-        user: userId, 
+    const chassis = await Chassis.create({
+        ...req.body,
+        user: userId,
         rvId,
         images: req.files?.map(file => file.location) || []
     });
@@ -122,12 +122,13 @@ exports.createOrUpdateChassis = asyncHandler(async (req, res) => {
 exports.getChassis = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const selectedRvId = await getSelectedRvByUserId(userId);
-    
+
     let rvId = req.query.rvId;
     if (!rvId && !selectedRvId) {
         throw new ApiError('No RV selected. Please select an RV first.', 400);
     }
     if (!rvId) rvId = selectedRvId;
+    // console.log("rvId", rvId);
 
     // Verify the user has access to the specified RV
     const hasAccess = await checkValidRv(userId, rvId);
@@ -137,17 +138,27 @@ exports.getChassis = asyncHandler(async (req, res) => {
 
     // console.log(rvId)
     const rv = await RV.findOne({ _id: rvId });
+    // console.log(rv)
     const chassisId = rv.chassis;
-    console.log(chassisId)
-    const chassis = await Chassis.findById({ 
-        _id: chassisId 
-    });
-
-    if(!chassis) {
+    // console.log(chassisId)
+    let chassis;
+    if (!chassisId) {
         return res.status(200).json({
             success: true,
             message: 'No chassis found',
-            data: []
+            data: {}
+        });
+    } else {
+        chassis = await Chassis.findById({
+            _id: chassisId
+        });
+    }
+
+    if (!chassis) {
+        return res.status(200).json({
+            success: true,
+            message: 'No chassis found',
+            data: {}
         });
     }
 
@@ -163,7 +174,7 @@ exports.getChassis = asyncHandler(async (req, res) => {
 // @access  Private
 exports.getChassisById = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
-    
+
     const chassis = await Chassis.findOne({
         _id: req.params.id,
         user: userId
@@ -185,7 +196,7 @@ exports.getChassisById = asyncHandler(async (req, res) => {
 // @access  Private
 // exports.updateChassis = asyncHandler(async (req, res) => {
 //     const userId = req.user.id || req.user._id;
-    
+
 //     // First verify the chassis exists and belongs to the user
 //     const existingChassis = await Chassis.findOne({
 //         _id: req.params.id,
@@ -202,14 +213,14 @@ exports.getChassisById = asyncHandler(async (req, res) => {
 //         if (!hasAccess) {
 //             throw new ApiError('You do not have permission to assign this chassis to the specified RV', 403);
 //         }
-        
+
 //         // If changing RVs, update the old and new RV references
 //         const oldRv = await RV.findOne({ chassis: existingChassis._id });
 //         if (oldRv) {
 //             oldRv.chassis = undefined;
 //             await oldRv.save();
 //         }
-        
+
 //         const newRv = await RV.findById(req.body.rvId);
 //         if (newRv) {
 //             newRv.chassis = existingChassis._id;
@@ -243,10 +254,10 @@ exports.updateChassis = asyncHandler(async (req, res) => {
     // 2. Handle file uploads if any
     if (req.files?.length > 0) {
         const oldImages = [...chassis.images];
-        
+
         // Update with new images
         chassis.images = req.files.map(file => file.location);
-        
+
         // Save the document (only once)
         await chassis.save();
 
@@ -269,7 +280,7 @@ exports.updateChassis = asyncHandler(async (req, res) => {
 // @access  Private
 exports.deleteChassis = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
-    
+
     // First verify the chassis exists and belongs to the user
     const chassis = await Chassis.findOne({
         _id: req.params.id,
@@ -282,7 +293,7 @@ exports.deleteChassis = asyncHandler(async (req, res) => {
 
     // Remove chassis reference from RV (maintaining existing logic)
     await RV.updateOne(
-        { chassis: chassis._id }, 
+        { chassis: chassis._id },
         { $unset: { chassis: "" } }
     );
 

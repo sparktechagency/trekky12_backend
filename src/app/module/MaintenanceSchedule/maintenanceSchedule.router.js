@@ -7,7 +7,8 @@ const {
     updateMaintenanceSchedule, 
     deleteMaintenanceSchedule,
     getMaintenanceByStatus,
-    getMaintenanceDashboard
+    getMaintenanceDashboard,
+    updateRVMaintenanceStatus // Add this
 } = require('./maintenanceSchedule.controller');
 const upload = require('../../../utils/uploadConfig');
 const { authenticateUser } = require('../../middleware/auth.middleware');
@@ -17,9 +18,10 @@ router.get('/get', authenticateUser, getMaintenanceSchedule);
 router.get('/get/:id', authenticateUser, getMaintenanceScheduleById);
 router.put('/update/:id', authenticateUser, updateMaintenanceSchedule);
 router.post('/delete/:id', authenticateUser, deleteMaintenanceSchedule);
-
-// New endpoints for maintenance status
-router.get('/status/:status', authenticateUser, getMaintenanceByStatus); // status: overdue, upcoming, scheduled, all
+router.get('/status/:status', authenticateUser, getMaintenanceByStatus);
 router.get('/dashboard', authenticateUser, getMaintenanceDashboard);
+
+// Add this new route
+router.put('/update-rv-status/:rvId', authenticateUser, updateRVMaintenanceStatus);
 
 module.exports = router;

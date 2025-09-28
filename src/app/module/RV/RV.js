@@ -39,7 +39,7 @@ const rvSchema = new mongoose.Schema({
     },
     state: {
         type: String,
-    },  
+    },
     phoneNumber: {
         type: String,
     },
@@ -63,6 +63,24 @@ const rvSchema = new mongoose.Schema({
     },
     weight: {
         type: Number,
+    },
+    isOverdueForMaintenance: {
+        type: Boolean,
+        default: false
+    },
+    overdueMaintenanceCount: {
+        type: Number,
+        default: 0
+    },
+    nextMaintenanceDate: {
+        type: Date
+    },
+    nextMaintenanceMileage: {
+        type: Number
+    },
+    lastMaintenanceCheck: {
+        type: Date,
+        default: Date.now
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,

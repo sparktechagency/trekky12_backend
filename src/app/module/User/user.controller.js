@@ -10,9 +10,9 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user.id)
         .populate({
             path: 'rvIds',
-            select: 'nickname currentMileage'
+            select: 'nickname currentMileage isOverdueForMaintenance',
         })
-        .populate('selectedRvId', 'nickname currentMileage')
+        .populate('selectedRvId', 'nickname currentMileage isOverdueForMaintenance')
         .select('-password');
     if (!user) throw new ApiError('User not found', 404);
     return res.status(200).json({
