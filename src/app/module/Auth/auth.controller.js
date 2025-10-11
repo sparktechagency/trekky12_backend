@@ -311,5 +311,80 @@ exports.adminLogin = async (req, res, next) => {
 };
 
 
+// ADMIN FORGOT PASSWORD
+exports.adminForgotPassword = async (req, res, next) => {
+    const { email } = req.body;
+    try {
+        const admin = await Admin.findOne({ email });
+        if (!admin) throw new ApiError('Admin not found', 404);
+        admin.passwordResetCode = {
+            code: tokenService.generateVerificationCode(),
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+        };
+
+        await admin.save();
+        // Send password reset code
+        await emailService.sendPasswordResetCode(email, admin.passwordResetCode.code.toString());
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password reset code sent to your email.'
+        });
+    } catch (err) {
+        return next(err);
+    }
+};
+
+
+// ADMIN VERIFY RESET CODE
+exports.adminVerifyCode = async (req, res, next) => {
+    const { email, code } = req.body;
+    try {
+        const admin = await Admin.findOne({ email });
+        if (!admin) throw new ApiError('Admin not found', 404);
+        if (admin.passwordResetCode.code !== code) {
+            throw new ApiError('Invalid reset code', 400);
+        }
+        if (admin.passwordResetCode.expiresAt < new Date()) {
+            throw new ApiError('Reset code has expired', 400);
+        }
+        return res.status(200).json({
+            success: true,
+            message: 'Reset code verified successfully.'
+        });
+    } catch (err) {
+        return next(err);
+    }
+};
+
+
+// ADMIN RESET PASSWORD
+exports.adminResetPassword = async (req, res, next) => {
+    const { email, newPassword, confirmPassword } = req.body;
+
+    try {
+        const admin = await Admin.findOne({ email });
+        if (!admin) throw new ApiError('Admin not found', 404);
+        if (newPassword !== confirmPassword) {
+            throw new ApiError('Passwords do not match', 400);
+        }
+        const salt = await bcrypt.genSalt(10);
+        admin.password = await bcrypt.hash(newPassword, salt);
+        admin.passwordResetCode = undefined;
+        admin.passwordResetCodeExpiresAt = undefined;
+        await admin.save();
+        res.status(200).json({
+            success: true,
+            message: 'Password updated successfully'
+        });
+    } catch (err) {
+        return next(err);
+    }
+};
+
+
+
+
+
 
 
