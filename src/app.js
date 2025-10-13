@@ -29,7 +29,8 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [         // your main frontend from .env
-  "http://10.10.20.60:3002"     // fallback localhost
+  "http://10.10.20.60:3002",   // fallback localhost
+  "*"
 ];
 
 
