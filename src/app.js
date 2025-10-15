@@ -30,13 +30,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [         // your main frontend from .env
   "http://10.10.20.60:3002",   // fallback localhost
-  "http://localhost:5173"
+  "http://localhost:5173",
+  "http://51.20.217.10:5000"
 ];
 
 
-// Security Middlewares
+// Security Middlewares (apply CORS only to API routes so static assets aren't blocked)
 // app.use(helmet());  
-app.use(cors({
+const apiCors = cors({
   origin: function (origin, callback) {
     console.log("Incoming origin:", origin);
     if (!origin) return callback(null, true);
@@ -48,7 +49,12 @@ app.use(cors({
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true
-}));
+});
+app.use('/api', apiCors);
+
+// Serve admin SPA and its assets before API routes
+app.use('/admin', express.static(path.join(__dirname, 'admin', 'dist')))
+app.use('/assets', express.static(path.join(__dirname, 'admin', 'dist', 'assets')))
 
 // Mount routes
 app.use('/api/auth', require('./app/module/Auth/auth.router'));
@@ -89,8 +95,6 @@ app.use('/api/trips', require('./app/module/Trip/trip.router'));
 app.get('/', (req, res) => {
   res.send("All ok")
 })
-app.use('/admin', express.static(path.join(__dirname, 'admin', 'dist')))
-app.use('/assets', express.static(path.join(__dirname, 'admin', 'dist', 'assets')))
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'dist', 'index.html'))
 })
