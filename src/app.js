@@ -31,7 +31,9 @@ app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [         // your main frontend from .env
   "http://10.10.20.60:3002",   // fallback localhost
   "http://localhost:5173",
-  "http://51.20.217.10:5000"
+  "http://51.20.217.10:5000",
+  "http://51.20.217.10:3000",
+  "http://51.20.217.10:3001",
 ];
 
 
