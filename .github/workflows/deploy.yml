@@ -21,8 +21,8 @@ jobs:
         run: 'npm i -f'
       - name: Install TypeScript Compiler
         run: npm install -g typescript
-      - name: Build Project
-        run: npm run build
+      # - name: Build Project
+      #   run: npm run build
 
   deploy:
     runs-on: ubuntu-latest
@@ -36,8 +36,8 @@ jobs:
         run: 'npm i -f'
       - name: Install TypeScript Compiler
         run: npm install -g typescript
-      - name: Build Project
-        run: npm run build
+      # - name: Build Project
+      #   run: npm run build
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
@@ -71,4 +71,4 @@ jobs:
           ssh $EC2_USER@$EC2_HOST "pm2 delete backend || true"  # Ensures no errors if the process doesn't exist
 
           # Start the backend application with PM2
-          ssh $EC2_USER@$EC2_HOST "cd ~/applications/backend && pm2 start dist/index.js --name backend"
+          ssh $EC2_USER@$EC2_HOST "cd ~/applications/backend && pm2 start src/server.js --name backend"
