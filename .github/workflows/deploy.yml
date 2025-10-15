@@ -68,7 +68,7 @@ jobs:
           ssh $EC2_USER@$EC2_HOST "echo '$ENV_VARS_JSON' > ~/applications/backend/.env"
 
           # Stop the existing PM2 process if it exists
-          ssh $EC2_USER@$EC2_HOST "pm2 delete backend || true"  # Ensures no errors if the process doesn't exist
+          ssh $EC2_USER@$EC2_HOST "tmux kill-session -t backend || true"  # Ensures no errors if the session doesn't exist
 
           # Start the backend application with PM2
-          ssh $EC2_USER@$EC2_HOST "cd ~/applications/backend && pm2 start src/server.js --name backend"
+          ssh $EC2_USER@$EC2_HOST "cd ~/applications/backend && tmux new-session -d -s backend 'node src/server.js'"
