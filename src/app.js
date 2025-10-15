@@ -90,7 +90,7 @@ app.get('/', (req, res) => {
   res.send("All ok")
 })
 app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../admin/dist/index.html'))
+  res.sendFile(path.join(__dirname, '/admin/dist/index.html'))
 })
 // app.use('/api/auth', authRoutes);
 // app.use('/api/user', userRoutes);
