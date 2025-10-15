@@ -90,6 +90,7 @@ app.get('/', (req, res) => {
   res.send("All ok")
 })
 app.use('/admin', express.static(path.join(__dirname, 'admin', 'dist')))
+app.use('/assets', express.static(path.join(__dirname, 'admin', 'dist', 'assets')))
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'dist', 'index.html'))
 })
