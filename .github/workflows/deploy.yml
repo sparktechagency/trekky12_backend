@@ -62,7 +62,7 @@ jobs:
             --exclude='.github' \
             . $EC2_USER@$EC2_HOST:~/applications/backend/
                       # Install production dependencies on EC2 for the backend
-          ssh $EC2_USER@$EC2_HOST "cd ~/applications/backend && npm install --frozen-lockfile --production"
+          ssh $EC2_USER@$EC2_HOST "cd ~/applications/backend && npm install -f"
 
           # Set the environment variables (using the ENV_VARS_JSON secret)
           ssh $EC2_USER@$EC2_HOST "echo '$ENV_VARS_JSON' > ~/applications/backend/.env"
